@@ -29,7 +29,7 @@ services:
     depends_on:
       - postgres
     env_file:
-      - ../.env
+      - .env
     ports:
       - "${BACKEND_PORT}:5000"
     networks:
