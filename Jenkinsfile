@@ -28,7 +28,7 @@ pipeline {
 
         stage('Start Initial Containers') {
             steps {
-                dir('JenkinsAutomation/app') {
+                dir('JenkinsAutomation/') {
                     echo "tarting PostgreSQL container"
                     sh 'docker-compose up -d postgres'
                 }
