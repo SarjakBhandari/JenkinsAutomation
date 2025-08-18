@@ -1,0 +1,346 @@
+* {
+    font-family: Arial, sans-serif;
+    font-size: 17px;
+    margin: 0;
+}
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(rgba(0, 0, 0, 0.138), rgba(0, 0, 0, 0.259)),url('../../img/blur-hospital.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    color: #e9fff7;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+nav, #subnav {
+    background-color: #18bab0;
+    color: rgb(255, 255, 255);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-direction: row;
+    position: sticky;
+}
+nav h1 {
+    font-weight: bolder;
+    font-size: 1.5rem;
+}
+nav #trans {
+    display: flex;
+    flex-direction: row;
+}
+#trans a {
+    font-weight: light;
+    margin: 1rem;
+    text-decoration: none;
+    color: rgb(252, 250, 247);
+    justify-content: space-around;
+}
+nav a img {
+    width: 3rem;
+}
+main {
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+}
+main h1 {
+    font-size: 1.5rem;
+    justify-self: center;
+}
+#boxcontent {
+    background: linear-gradient(#28615dc7, #238b84d3),url('../../img/stetiscope.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    width: fit-content;
+    height: 60vh;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    margin-top: 5rem;
+    border-radius: 5rem;
+}
+.header-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 2rem;
+    justify-content: space-between;
+}
+#boxcontent img {
+    height: 50vh;
+    border: solid #18bab0 0.5rem;
+    border-radius: 6rem;
+    margin: 1rem;
+    flex-shrink: 2;
+}
+#header img {
+    width: 5rem;
+}
+footer {
+    background-color: #18bab0;
+    color: rgb(255, 255, 255);
+    justify-content: space-around;
+    text-align: center;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+input::placeholder {
+    font-size: 0.8rem;
+}
+.header-content h1, p, a {
+    text-decoration: none;
+    align-items: center;
+    justify-content: space-around;
+    margin: 0.5rem;
+}
+.button {
+    width: 8rem;
+    text-align: center;
+    margin: 1rem;
+    font-weight: bold;
+    background-color: #325a56;
+    color: white;
+    cursor: pointer;
+    border-width: 100%;
+}*{
+    font-family: Arial, sans-serif;
+    font-size:  17px;
+    margin: 0;
+}
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(rgba(0, 0, 0, 0.138), rgba(0, 0, 0, 0.259)),url('../../img/blur-hospital.jpg');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    color: #e9fff7;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+
+}
+
+nav ,#subnav{ 
+    background-color: #18bab0; 
+    color: rgb(255, 255, 255); 
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    flex-direction: row;
+    position: sticky;
+}
+
+nav h1{
+    font-weight: bolder;
+    font-size: 1.5rem;
+}
+nav #trans{
+    display: flex;
+    flex-direction: row;
+}
+
+#trans a{
+    font-weight: light;
+    margin: 1rem;
+    text-decoration: none;
+    color:rgb(252, 250, 247);
+    justify-content: space-around;
+}
+nav a img{
+    width: 3rem;
+}
+
+main{
+    display: flex;
+    justify-content: center;
+    flex-direction: row;
+}
+
+
+main h1{
+    font-size: 1.5rem;
+    justify-self: center;
+}
+
+#boxcontent{
+    background: linear-gradient( #28615dc7, #238b84d3);
+    background-size: cover;
+    background-repeat: no-repeat;
+    width:fit-content;
+    height:60vh;
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    margin-top: 5rem;
+    border-radius: 5rem;
+}
+
+.header-content{
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    margin: 2rem;
+    justify-content: space-between;
+}
+
+#boxcontent img{
+    height: 50vh;
+    border:solid  #18bab0 0.5rem;
+    border-radius: 6rem;
+    margin: 1rem;
+    flex-shrink: 2;
+
+}
+
+#header img{
+    width: 5rem;
+}
+
+footer{
+    background-color: #18bab0; 
+    color: rgb(255, 255, 255); 
+    justify-content: space-around;
+    text-align: center;
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+}
+input::placeholder {
+    font-size: 0.8rem ;
+}
+
+.header-content h1,p,a{
+    text-decoration: none;
+    align-items: center;
+    justify-content: space-around;
+    margin:0.5rem;
+}
+
+.button{
+    width:8rem;
+
+    text-align: center;
+    margin: 1rem;
+
+    font-weight: bold;
+
+    background-color:  #325a56;
+    color:white;
+    cursor:pointer;
+    border-width: 100%;
+}
+
+#login{
+    background: linear-gradient( #28615dc7, #238b84d3);
+    width:fit-content;
+    height: fit-content;
+    padding: 1rem;
+    justify-self: center;;
+    margin-top: 5rem;
+    border-radius: 1rem;
+    width: fit-content;
+    display: flex;
+    justify-content: space-between;
+}
+
+button{
+    border: 2px solid #51dacc;
+    border-radius: 1rem;
+    padding: 0.5rem;
+    width: 80%;
+}
+form{
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+}
+form label{
+    font: 2rem;
+    margin: 0.5rem;
+}
+#login img{
+    width: 12rem;
+    border: solid #51dacc 0.5rem;
+    border-radius: 14px;
+}
+
+
+#reg input{
+    padding: 0.5rem;
+}
+
+#reg label{
+    margin: 0;
+}
+
+#reg{
+    margin: 0.5rem;
+    justify-content: center;
+}
+#subnav{
+    background-color: #325a56;
+    display: none;
+    font-weight: light;
+    
+    justify-content: space-around;
+}
+#subnav a{
+    text-decoration: none;
+    color:rgb(252, 250, 247);
+}
+
+@media (max-width:1360px) {
+
+    #boxcontent img, #login img, #info{
+display: none;
+    }
+    #boxcontent{
+        background: linear-gradient( #1c1f1ec5, #163635b0),url(../../img/hospital.jpg);
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: cover;
+    }
+}
+@media (max-width:700px) {
+
+    nav #trans{
+        display: none;
+    }
+
+    #subnav{
+        display: flex;
+    }
+
+    .button{
+        margin: 0.5rem;
+        border-width: 50%;
+        padding: 0.5rem;
+    }
+    footer{
+        display: none;
+    }
+    #submitt{
+        flex-direction: column;
+    }
+    input{
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width:500px)
+{
+
+    #boxcontent{
+        border-radius:0px;
+        margin-top:0;
+        height:85vh;
+    }
+}

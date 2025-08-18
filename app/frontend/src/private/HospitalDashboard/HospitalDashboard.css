@@ -1,0 +1,151 @@
+* {
+  font-family: Arial, sans-serif;
+  font-size: 17px;
+  margin: 0;
+}
+body {
+  margin: 0;
+  padding: 0;
+  background: linear-gradient(rgba(0, 0, 0, 0.138), rgba(0, 0, 0, 0.259)),url('../../img/blur-hospital.jpg');
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: center;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+nav, #subnav {
+  background-color: #18bab0;
+  color: rgb(255, 255, 255);
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  flex-direction: row;
+  position: sticky;
+}
+nav h1 {
+  font-weight: bolder;
+  font-size: 1.5rem;
+}
+nav #trans {
+  display: flex;
+  flex-direction: row;
+}
+#trans a {
+  font-weight: light;
+  margin: 1rem;
+  text-decoration: none;
+  color: rgb(252, 250, 247);
+  justify-content: space-around;
+}
+nav a img {
+  width: 3rem;
+}
+body {
+  background-color: var(--gray-100);
+  color: var(--gray-700);
+}
+main {
+  display: flex;
+  justify-content: center;
+  flex-direction: row;
+}
+main h1 {
+  font-size: 1.5rem;
+  justify-self: center;
+}
+main {
+  padding: 2rem;
+}
+#boxcontent{
+  background: linear-gradient( #28615dc7, #238b84d3),url(../../img/stetiscope.jpg);
+  background-size: cover;
+  background-repeat: no-repeat;
+  width:fit-content;
+  color:#060e0d;
+  height:60vh;
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  margin-top: 5rem;
+  border-radius: 5rem;
+}
+
+.header-content{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin: 2rem;
+  justify-content: space-between;
+}
+
+#boxcontent img{
+  height: 45vh;
+  border:solid  #18bab0 0.5rem;
+  border-radius: 6rem;
+  margin: 1rem;
+  flex-shrink: 2;
+
+}
+.header-buttons .button {
+  border: 2px solid #51dacc;
+  border-radius: 1rem;
+  padding: 1rem;
+  width: 100%;
+  background-color: white;
+  color: var(--gray-700);
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.logout-btn{
+  padding-right: 1.5rem;
+}
+.header-buttons .button:hover {
+  background-color: var(--dark-teal);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+#image img {
+  max-width: 100%;
+  border-radius: 16px;
+  margin-top: 2rem;
+}
+
+footer{
+  background-color: #18bab0; 
+  color: rgb(255, 255, 255); 
+  justify-content: space-around;
+  text-align: center;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .sidebar {
+    display: none;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+}
+
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome-card {
+    padding: 1.5rem;
+  }
+}
