@@ -66,12 +66,19 @@ pipeline {
                 }
             }
         }
-
-        stage('Deploy to Production') {
+        stage('Preview Deployment') {
             steps {
-                timeout(time: 1, unit: 'DAYS') {
-                    input message: 'Approve production deployment?'
+                script {
+                    def dbHostIP = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' healthify_frontend", returnStdout: true).trim()
+                    def previewUrl = "http://${dbHostIP}:${FRONTEND_PORT}"
+
+                    echo "Preview your site at: ${previewUrl}"
                 }
+
+                timeout(time: 1, unit: 'DAYS') {
+                    input message: 'Visit the site and approve production deployment when ready.'
+                }
+
                 echo "Production deployment approved"
             }
         }
