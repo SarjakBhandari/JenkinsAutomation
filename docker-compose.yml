@@ -28,7 +28,6 @@ services:
     container_name: healthify_backend
     depends_on:
       postgres:
-        condition: service_healthy
     env_file:
       - ../.env
     ports:
