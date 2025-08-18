@@ -7,7 +7,6 @@ pipeline {
         DB_PASSWORD = 'postgres'
         DB_NAME = 'healthify'
         API_PORT = '5000'
-        FRONTEND_PORT = '5173'
     }
 
     stages {
