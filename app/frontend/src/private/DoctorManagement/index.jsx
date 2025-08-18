@@ -8,6 +8,8 @@ import "./DoctorManagement.css";
 const DoctorMgmt = () => {
   const [doctors, setDoctors] = useState([]);
   const [searchId, setSearchId] = useState('');
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 
   // Function to get the token from local storage
   const getToken = () => {
@@ -17,7 +19,7 @@ const DoctorMgmt = () => {
   useEffect(() => {
     // Fetch all doctors with the token
     const token = getToken();
-    axios.get('http://localhost:5000/api/doctor', {
+    axios.get(`${API_BASE_URL}/doctor`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -32,7 +34,7 @@ const DoctorMgmt = () => {
 
   const deleteDoctor = (id) => {
     const token = getToken();
-    axios.delete(`http://localhost:5000/api/doctor/${id}`, {
+    axios.delete(`${API_BASE_URL}/doctor/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -49,7 +51,7 @@ const DoctorMgmt = () => {
     const token = getToken();
     if (searchId.trim() === '') {
       // Fetch all doctors if search input is empty
-      axios.get('http://localhost:5000/api/doctor', {
+      axios.get(`${API_BASE_URL}/doctor`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -62,7 +64,7 @@ const DoctorMgmt = () => {
         });
     } else {
       // Fetch doctor by ID with the token
-      axios.get(`http://localhost:5000/api/doctor/${searchId}`, {
+      axios.get(`${API_BASE_URL}/doctor/${searchId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }

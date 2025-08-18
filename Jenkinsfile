@@ -46,13 +46,13 @@ pipeline {
                     def dbHostIP = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' healthify_db", returnStdout: true).trim()
                     def apiBaseUrl = "http://${dbHostIP}:${API_PORT}/api"
 
-                    echo "Injecting DB_HOST=${dbHostIP} and REACT_APP_API_BASE_URL=${apiBaseUrl}"
+                    echo "Injecting DB_HOST=${dbHostIP} and VITE_API_BASE_URL=${apiBaseUrl}"
 
                     // Update backend .env
                     sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' JenkinsAutomation/app/backend/.env"
 
                     // Update frontend .env
-                    sh "sed -i '/^REACT_APP_API_BASE_URL=/c\\REACT_APP_API_BASE_URL=${apiBaseUrl}' JenkinsAutomation/app/frontend/.env"
+                    sh "sed -i '/^VITE_API_BASE_URL=/c\\REACT_APP_API_BASE_URL=${apiBaseUrl}' JenkinsAutomation/app/frontend/.env"
                 }
             }
         }
@@ -69,7 +69,7 @@ pipeline {
             steps {
                 script {
                     def dbHostIP = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' healthify_frontend", returnStdout: true).trim()
-                    def previewUrl = "http://192.168.53.3:${FRONTEND_PORT}"
+                    def previewUrl = "http://192.168.50.3:${FRONTEND_PORT}"
 
                     echo "Preview your site at: ${previewUrl}"
                 }

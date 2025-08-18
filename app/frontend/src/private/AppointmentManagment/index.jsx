@@ -8,11 +8,12 @@ import "./AppointmentManagement.css";
 const AppointmentManagement = () => {
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   // Fetch appointments from the API
   useEffect(() => {
     const token = localStorage.getItem('token');
-    axios.get('http://localhost:5000/api/appointment/', {
+    axios.get(`${API_BASE_URL}/appointment/`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -27,7 +28,7 @@ const AppointmentManagement = () => {
 
   const deleteAppointment = (id) => {
     const token = localStorage.getItem('token');
-    axios.delete(`http://localhost:5000/api/appointment/${id}`, {
+    axios.delete(`${API_BASE_URL}/appointment/${id}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

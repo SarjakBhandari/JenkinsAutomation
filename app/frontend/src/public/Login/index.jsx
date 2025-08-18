@@ -13,7 +13,7 @@ import doctorImg from '../../img/doctor.jpg';
 const Login = () => {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const schema = yup.object().shape({
     email: yup.string().email("Invalid email format").required("Email is required"),

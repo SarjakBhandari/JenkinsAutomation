@@ -7,7 +7,7 @@ import "./DoctorManagement.css";
 const DoctorRegistration = () => {
   const { register, handleSubmit, reset } = useForm();
   const navigate = useNavigate();
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const onSubmit = (data) => {
     const token = localStorage.getItem('token'); // Get the token from local storage

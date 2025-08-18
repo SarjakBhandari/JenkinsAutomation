@@ -8,7 +8,7 @@ const AdminPanel = () => {
   const [organizations, setOrganizations] = useState([]);
   const token = localStorage.getItem('token'); // Get the token from localStorage
 
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/organization`, {

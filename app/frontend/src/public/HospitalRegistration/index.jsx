@@ -9,7 +9,7 @@ import './HospitalRegistration.css';
 
 const HospitalRegistration = () => {
   const navigate = useNavigate(); 
- const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
   const schema = yup.object().shape({
     organization: yup.string().required('Organization name is required'),
     email: yup.string().email('Invalid email address').required('Email is required'),
