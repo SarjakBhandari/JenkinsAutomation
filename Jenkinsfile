@@ -70,7 +70,7 @@ pipeline {
             steps {
                 script {
                     def dbHostIP = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' healthify_frontend", returnStdout: true).trim()
-                    def previewUrl = "http://${dbHostIP}:${FRONTEND_PORT}"
+                    def previewUrl = "http://192.168.53.3:${FRONTEND_PORT}"
 
                     echo "Preview your site at: ${previewUrl}"
                 }
