@@ -9,7 +9,6 @@ RUN npm install
 
 COPY . .
 RUN chown -R next:next /usr/src/app
-
 USER next
-EXPOSE 3000
+EXPOSE 5173
 CMD ["npm", "start"]
