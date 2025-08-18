@@ -50,7 +50,7 @@ pipeline {
                     echo "Injecting DB_HOST=${dbHostIP} and REACT_APP_API_BASE_URL=${apiBaseUrl}"
 
                     // Update backend .env
-                    sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' JenkinsAutomation/app/.env"
+                    sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' JenkinsAutomation/app/backend/.env"
 
                     // Update frontend .env
                     sh "sed -i '/^REACT_APP_API_BASE_URL=/c\\REACT_APP_API_BASE_URL=${apiBaseUrl}' JenkinsAutomation/app/frontend/.env"
