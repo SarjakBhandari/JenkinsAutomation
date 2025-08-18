@@ -35,7 +35,7 @@ const PatientManagement = () => {
 
   const deletePatient = (phone) => {
     const token = getToken();
-    axios.delete(`${API_BASE_URL}patient/phone/${phone}`, {
+    axios.delete(`${API_BASE_URL}/patient/phone/${phone}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
