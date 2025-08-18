@@ -27,7 +27,7 @@ services:
       dockerfile: ../Dockerfile
     container_name: healthify_backend
     depends_on:
-      postgres:
+      - postgres
     env_file:
       - ../.env
     ports:
