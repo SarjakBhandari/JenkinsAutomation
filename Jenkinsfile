@@ -4,6 +4,7 @@ pipeline {
     }
 
     environment {
+        DOCKER_HOST = 'unix:///var/run/docker.sock'
         DB_USER = 'postgres'
         DB_PASSWORD = 'postgres'
         DB_NAME = 'healthify'
