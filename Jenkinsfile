@@ -22,13 +22,13 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 echo "Cloning repository"
-                sh 'git clone https://github.com/SarjakBhandari/YourRepo.git'
+                sh 'git clone https://github.com/SarjakBhandari/JenkinsAutomation'
             }
         }
 
         stage('Start Initial Containers') {
             steps {
-                dir('YourRepo/app') {
+                dir('JenkinsAutomation/app') {
                     echo "tarting PostgreSQL container"
                     sh 'docker-compose up -d postgres'
                 }
@@ -54,7 +54,7 @@ pipeline {
 
         stage('Build and Deploy Fullstack App') {
             steps {
-                dir('YourRepo/app') {
+                dir('JenkinsAutomation') {
                     echo " Building and deploying backend and frontend"
                     sh 'docker-compose up -d --build'
                 }
