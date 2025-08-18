@@ -1,7 +1,5 @@
 pipeline {
-    agent {
-        label 'SlaveNode'
-    }
+    agent { label 'SlaveNode' }
 
     environment {
         DOCKER_HOST = 'unix:///var/run/docker.sock'
@@ -13,6 +11,13 @@ pipeline {
     }
 
     stages {
+        stage('Validate Docker Access') {
+            steps {
+                echo "Checking Docker daemon connectivity"
+                sh 'docker info'
+            }
+        }
+
         stage('Clean Workspace') {
             steps {
                 echo "Cleaning workspace"
@@ -27,10 +32,10 @@ pipeline {
             }
         }
 
-        stage('Start Initial Containers') {
+        stage('Start PostgreSQL Container') {
             steps {
-                dir('JenkinsAutomation/') {
-                    echo "tarting PostgreSQL container"
+                dir('JenkinsAutomation') {
+                    echo "Starting PostgreSQL container"
                     sh 'docker-compose up -d postgres'
                 }
             }
@@ -42,13 +47,13 @@ pipeline {
                     def dbHostIP = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' healthify_db", returnStdout: true).trim()
                     def apiBaseUrl = "http://${dbHostIP}:${API_PORT}/api"
 
-                    echo "njecting DB_HOST=${dbHostIP} and REACT_APP_API_BASE_URL=${apiBaseUrl}"
+                    echo "Injecting DB_HOST=${dbHostIP} and REACT_APP_API_BASE_URL=${apiBaseUrl}"
 
                     // Update backend .env
-                    sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' YourRepo/app/.env"
+                    sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' JenkinsAutomation/app/.env"
 
                     // Update frontend .env
-                    sh "sed -i '/^REACT_APP_API_BASE_URL=/c\\REACT_APP_API_BASE_URL=${apiBaseUrl}' YourRepo/app/frontend/.env"
+                    sh "sed -i '/^REACT_APP_API_BASE_URL=/c\\REACT_APP_API_BASE_URL=${apiBaseUrl}' JenkinsAutomation/app/frontend/.env"
                 }
             }
         }
@@ -56,7 +61,7 @@ pipeline {
         stage('Build and Deploy Fullstack App') {
             steps {
                 dir('JenkinsAutomation') {
-                    echo " Building and deploying backend and frontend"
+                    echo "Building and deploying backend and frontend"
                     sh 'docker-compose up -d --build'
                 }
             }
@@ -75,7 +80,7 @@ pipeline {
     post {
         success {
             mail to: 'sarjakytdfiles@gmail.com',
-                 subject: 'BUILD SUCCESS NOTIFICATION',
+                 subject: '✅ BUILD SUCCESS NOTIFICATION',
                  body: """Hi Sarjak,
 
 Build #${BUILD_NUMBER} was successful. Visit: ${BUILD_URL}
