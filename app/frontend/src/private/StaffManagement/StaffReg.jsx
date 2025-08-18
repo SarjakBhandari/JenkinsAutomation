@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import axios from 'axios';
 import "./StaffManagement.css";
-
+import { API_BASE_URL } from "../../config";
 const StaffRegistration = () => {
   const { register, handleSubmit, reset } = useForm();
   const navigate = useNavigate();
@@ -11,7 +11,7 @@ const StaffRegistration = () => {
   const addStaff = async (data) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/staff', data, {
+      await axios.post(`${API_BASE_URL}/api/staff`, data, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

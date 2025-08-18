@@ -3,12 +3,12 @@ import DataTable from "react-data-table-component";
 import { BrowserRouter as Router, Route, Routes, Link } from "react-router-dom";
 import axios from "axios";
 import "./AdminDashboard.css";
+import { API_BASE_URL } from "../../config";
+
 
 const AdminPanel = () => {
   const [organizations, setOrganizations] = useState([]);
   const token = localStorage.getItem('token'); // Get the token from localStorage
-
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   useEffect(() => {
     axios.get(`${API_BASE_URL}/organization`, {

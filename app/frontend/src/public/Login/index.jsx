@@ -7,13 +7,13 @@ import axios from 'axios';
 import './Login.css';
 import logo from '../../img/logo.png';  
 import doctorImg from '../../img/doctor.jpg';
-
+import { API_BASE_URL } from "../../config";
 
 
 const Login = () => {
   const navigate = useNavigate();
   const [serverError, setServerError] = useState('');
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 
   const schema = yup.object().shape({
     email: yup.string().email("Invalid email format").required("Email is required"),

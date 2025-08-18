@@ -4,11 +4,12 @@ import { Plus } from 'lucide-react';
 import axios from 'axios';
 import DataTable from "react-data-table-component";
 import './StaffManagement.css';
+import { API_BASE_URL } from "../../config";
 
 const StaffManagement = () => {
   const [staff, setStaff] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
+ 
 
   useEffect(() => {
     fetchStaff();

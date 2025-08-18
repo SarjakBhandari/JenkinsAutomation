@@ -2,6 +2,7 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import "./PatientManagement.css";
+import { API_BASE_URL } from "../../config";
 
 const PatientRegistration = ({ addPatient }) => {
   const { register, handleSubmit, reset } = useForm();

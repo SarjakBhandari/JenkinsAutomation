@@ -3,12 +3,11 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import "./DoctorManagement.css";
+import { API_BASE_URL } from "../../config";
 
 const DoctorRegistration = () => {
   const { register, handleSubmit, reset } = useForm();
   const navigate = useNavigate();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
   const onSubmit = (data) => {
     const token = localStorage.getItem('token'); // Get the token from local storage
     axios.post(`${API_BASE_URL}/api/doctor`, data, {

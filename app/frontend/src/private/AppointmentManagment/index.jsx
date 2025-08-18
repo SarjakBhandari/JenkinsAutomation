@@ -4,11 +4,12 @@ import { Link } from "react-router-dom";
 import { Plus } from 'lucide-react';
 import DataTable from "react-data-table-component";
 import "./AppointmentManagement.css";
+import { API_BASE_URL } from "../../config";
 
 const AppointmentManagement = () => {
   const [appointments, setAppointments] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 
   // Fetch appointments from the API
   useEffect(() => {

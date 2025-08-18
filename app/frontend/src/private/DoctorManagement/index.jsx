@@ -4,11 +4,11 @@ import { Link } from "react-router-dom";
 import { Search, Plus } from 'lucide-react';
 import axios from 'axios';
 import "./DoctorManagement.css";
+import { API_BASE_URL } from "../../config";
 
 const DoctorMgmt = () => {
   const [doctors, setDoctors] = useState([]);
   const [searchId, setSearchId] = useState('');
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 
   // Function to get the token from local storage

@@ -7,11 +7,11 @@ import {
 import DataTable from 'react-data-table-component';
 import axios from 'axios';
 import './PatientManagement.css';
+import { API_BASE_URL } from "../../config";
 
 const PatientManagement = () => {
   const [patients, setPatients] = useState([]);
   const [searchPhone, setSearchPhone] = useState('');
-  const API_BASE_URL = process.env.REACT_APP_API_BASE_URL;
   // Function to get the token from local storage
   const getToken = () => {
     return localStorage.getItem('token');

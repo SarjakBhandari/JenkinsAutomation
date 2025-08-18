@@ -3,12 +3,12 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios"; // Import Axios
 import "./AppointmentManagement.css";
+import { API_BASE_URL } from "../config";
 
 const AppointmentRegistration = ({ addAppointment }) => {
   const { register, handleSubmit, reset } = useForm();
   const [errorMessage, setErrorMessage] = useState(""); // State for error messages
   const navigate = useNavigate();
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
   const onSubmit = async (data) => {
     try {
