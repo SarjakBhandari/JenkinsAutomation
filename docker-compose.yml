@@ -43,8 +43,8 @@ services:
 
   frontend:
     build:
-      context: ./app/frontend
-      dockerfile: Dockerfile
+      context: ./app/frontend/
+      dockerfile: ./Dockerfile
     container_name: healthify_frontend
     env_file:
       - .env
