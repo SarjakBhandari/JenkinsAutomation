@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios"; // Import Axios
 import "./AppointmentManagement.css";
-import { API_BASE_URL } from "../config";
+import { API_BASE_URL } from "../../config";
 
 const AppointmentRegistration = ({ addAppointment }) => {
   const { register, handleSubmit, reset } = useForm();

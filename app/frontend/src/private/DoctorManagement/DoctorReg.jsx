@@ -10,7 +10,7 @@ const DoctorRegistration = () => {
   const navigate = useNavigate();
   const onSubmit = (data) => {
     const token = localStorage.getItem('token'); // Get the token from local storage
-    axios.post(`${API_BASE_URL}/api/doctor`, data, {
+    axios.post(`${API_BASE_URL}/doctor`, data, {
       headers: {
         'Authorization': `Bearer ${token}`
       }

@@ -11,7 +11,7 @@ const StaffRegistration = () => {
   const addStaff = async (data) => {
     try {
       const token = localStorage.getItem('token');
-      await axios.post(`${API_BASE_URL}/api/staff`, data, {
+      await axios.post(`${API_BASE_URL}/staff`, data, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
