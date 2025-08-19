@@ -1,0 +1,102 @@
+---
+- name: Bootstrap all nodes with Docker & banner
+  hosts: all
+  become: yes
+  vars:
+    registry_ip: "{{ registry_ip | default('192.168.50.4') }}"
+    version:     "{{ version     | default('latest') }}"
+    network_name: healthify_net
+    stack_file:   /home/{{ ansible_user }}/docker-stack.yml
+
+  tasks:
+    - name: Install Docker
+      apt:
+        name: docker.io
+        state: present
+        update_cache: yes
+
+    - name: Ensure Docker Python SDK is installed
+      pip:
+        name: docker
+        executable: pip3
+
+    - name: Enable & start Docker
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Configure SSH banner
+      copy:
+        dest: /etc/issue.net
+        content: "🚨 Authorized access only. Activity monitored.\n"
+
+    - name: Enable SSH banner in config
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Banner'
+        line: 'Banner /etc/issue.net'
+
+    - name: Reload SSHD
+      service:
+        name: ssh
+        state: reloaded
+
+- name: Initialize Swarm on manager
+  hosts: swarm_manager
+  become: yes
+  vars:
+    advertise_addr: "{{ ansible_host }}"
+  tasks:
+    - name: Init Swarm if not already
+      community.docker.docker_swarm:
+        state: present
+        advertise_addr: "{{ advertise_addr }}"
+
+    - name: Create overlay network if missing
+      community.docker.docker_network:
+        name: "{{ network_name }}"
+        driver: overlay
+        state: present
+
+- name: Join Swarm on workers
+  hosts: swarm_workers
+  become: yes
+  tasks:
+    - name: Join worker to Swarm
+      community.docker.docker_swarm:
+        state: join
+        join_token: "{{ hostvars[groups['swarm_manager'][0]].docker_swarm_info.JoinTokens.Worker }}"
+        remote_addrs:
+          - "{{ groups['swarm_manager'][0] }}:2377"
+
+- name: Deploy fullstack stack
+  hosts: swarm_manager
+  become: yes
+  vars:
+    stack_name: healthify
+  tasks:
+    - name: Render docker-stack.yml from template
+      template:
+        src: files/docker-stack.yml.j2
+        dest: "{{ stack_file }}"
+
+    - name: Pull backend image
+      community.docker.docker_image:
+        name: "{{ registry_ip }}:5000/healthify-backend"
+        tag: "{{ version }}"
+        source: pull
+
+    - name: Pull frontend image
+      community.docker.docker_image:
+        name: "{{ registry_ip }}:5000/healthify-frontend"
+        tag: "{{ version }}"
+        source: pull
+
+    - name: Deploy or update the Docker stack
+      community.docker.docker_stack:
+        name: "{{ stack_name }}"
+        state: present
+        compose:
+          - "{{ stack_file }}"
+        prune: yes

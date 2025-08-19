@@ -1,0 +1,68 @@
+version: '3.2'
+
+networks:
+  healthify_net:
+    driver: overlay
+
+volumes:
+  pgdata:
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: healthify
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - healthify_net
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: any
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  backend:
+    image: 192.168.50.4:5000/healthify-backend:latest
+    env_file:
+      - .env
+    ports:
+      - "5000:5000"
+    networks:
+      - healthify_net
+    depends_on:
+      - postgres
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  frontend:
+    image: 192.168.50.4:5000/healthify-frontend:latest
+    env_file:
+      - .env
+    ports:
+      - "5173:5173"
+    networks:
+      - healthify_net
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5173/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5

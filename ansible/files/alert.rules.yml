@@ -1,0 +1,38 @@
+groups:
+  - name: healthify-app-alerts
+    rules:
+      - alert: BackendMetricsDown
+        expr: up{job="backend-metrics"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend metrics endpoint down"
+          description: "Prometheus cannot scrape healthify_backend:5000/metrics."
+
+      - alert: FrontendHealthFail
+        expr: probe_success{instance="http://healthify_frontend:5173/health"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Frontend health check failing"
+          description: "Blackbox HTTP probe failing for frontend /health."
+
+      - alert: BackendHealthFail
+        expr: probe_success{instance="http://healthify_backend:5000/health"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Backend health check failing"
+          description: "Blackbox HTTP probe failing for backend /health."
+
+      - alert: HighHttpProbeLatency
+        expr: avg_over_time(probe_duration_seconds[5m]) > 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP probe latency"
+          description: "Average probe time > 1s over 5m for one or more endpoints."

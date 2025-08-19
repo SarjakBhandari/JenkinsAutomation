@@ -1,0 +1,50 @@
+---
+- name: Deploy monitoring stack (Prometheus, Grafana, Blackbox)
+  hosts: swarm_manager
+  become: yes
+  vars:
+    monitor_dir: /home/jenkins/monitoring
+    stack_file:  "{{ monitor_dir }}/monitoring-stack.yml"
+  tasks:
+    - name: Ensure monitoring directory exists
+      file:
+        path: "{{ monitor_dir }}"
+        state: directory
+        owner: jenkins
+        group: jenkins
+        mode: '0755'
+
+    - name: Copy monitoring stack
+      copy:
+        src: files/monitoring-stack.yml
+        dest: "{{ stack_file }}"
+        owner: jenkins
+        group: jenkins
+        mode: '0644'
+
+    - name: Copy prometheus.yml
+      copy:
+        src: files/prometheus.yml
+        dest: "{{ monitor_dir }}/prometheus.yml"
+        owner: jenkins
+        group: jenkins
+        mode: '0644'
+
+    - name: Copy alert.rules.yml
+      copy:
+        src: files/alert.rules.yml
+        dest: "{{ monitor_dir }}/alert.rules.yml"
+        owner: jenkins
+        group: jenkins
+        mode: '0644'
+
+    - name: Ensure grafana data dir exists
+      file:
+        path: /var/lib/grafana
+        state: directory
+        owner: 472
+        group: 472
+        mode: '0755'
+
+    - name: Deploy monitoring stack
+      shell: docker stack deploy -c "{{ stack_file }}" monitoring
