@@ -18,10 +18,7 @@ pipeline {
                 echo "Cleaning workspace"
                 deleteDir()
                 echo "Cloning repository"
-                checkout([$class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[url: 'https://github.com/SarjakBhandari/JenkinsAutomation']]
-                    ])
+                sh 'git clone https://github.com/SarjakBhandari/JenkinsAutomation'
             }
         }
 
