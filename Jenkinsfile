@@ -15,7 +15,6 @@ pipeline {
         ANSIBLE_DIR       = "JenkinsAutomation/ansible"
         SSH_KEY           = "~/.ssh/id_rsa"
         HOST_IP           = "192.168.50.3"
-        ANSIBLE_DIR = "JenkinsAutomation/ansible"
 
     }
 
