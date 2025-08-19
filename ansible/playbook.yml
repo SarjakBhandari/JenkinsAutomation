@@ -4,12 +4,27 @@
   become: yes
   vars:
     registry_ip: "{{ registry_ip | default('192.168.50.4') }}"
-    version:     "{{ version     | default('latest') }}"
+    version: "{{ version | default('latest') }}"
     network_name: healthify_net
-    stack_file:   /home/{{ ansible_user }}/docker-stack.yml
-
+    stack_file: /home/{{ ansible_user }}/docker-stack.yml
   tasks:
-    - name: Install Docker
+    - name: Ensure prerequisites for Docker SDK
+      apt:
+        name:
+          - python3-pip
+          - python3-venv
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - software-properties-common
+        state: present
+        update_cache: yes
+      register: apt_result
+      retries: 3
+      delay: 5
+      until: apt_result is succeeded
+
+    - name: Install Docker engine
       apt:
         name: docker.io
         state: present
@@ -29,7 +44,8 @@
     - name: Configure SSH banner
       copy:
         dest: /etc/issue.net
-        content: "🚨 Authorized access only. Activity monitored.\n"
+        content: |
+          🚨 Authorized access only. Activity monitored.
 
     - name: Enable SSH banner in config
       lineinfile:
@@ -42,6 +58,7 @@
         name: ssh
         state: reloaded
 
+# --- SWARM INIT ---
 - name: Initialize Swarm on manager
   hosts: swarm_manager
   become: yes
@@ -53,23 +70,44 @@
         state: present
         advertise_addr: "{{ advertise_addr }}"
 
+    - name: Gather Swarm join tokens
+      community.docker.docker_swarm_info:
+      register: swarm_info
+
+    - name: Set join token facts
+      set_fact:
+        manager_join_token: "{{ swarm_info.swarm_facts.JoinTokens.Manager }}"
+        worker_join_token: "{{ swarm_info.swarm_facts.JoinTokens.Worker }}"
+      run_once: true
+      delegate_facts: true
+
     - name: Create overlay network if missing
       community.docker.docker_network:
         name: "{{ network_name }}"
         driver: overlay
         state: present
 
+# --- SWARM JOIN ---
 - name: Join Swarm on workers
   hosts: swarm_workers
   become: yes
   tasks:
+    - name: Wait for manager facts to be available
+      wait_for:
+        host: "{{ groups['swarm_manager'][0] }}"
+        port: 2377
+        delay: 5
+        timeout: 60
+      delegate_to: localhost
+
     - name: Join worker to Swarm
       community.docker.docker_swarm:
         state: join
-        join_token: "{{ hostvars[groups['swarm_manager'][0]].docker_swarm_info.JoinTokens.Worker }}"
+        join_token: "{{ hostvars[groups['swarm_manager'][0]].worker_join_token }}"
         remote_addrs:
-          - "{{ groups['swarm_manager'][0] }}:2377"
+          - "{{ hostvars[groups['swarm_manager'][0]].ansible_host }}:2377"
 
+# --- DEPLOY STACK ---
 - name: Deploy fullstack stack
   hosts: swarm_manager
   become: yes
