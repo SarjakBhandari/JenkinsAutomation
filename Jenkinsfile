@@ -16,7 +16,7 @@ pipeline {
     stages {
         stage('Preparing Files') {
             steps {
-                echo "Cleaning workspace"
+                echo " Cleaning workspace"
                 deleteDir()
                 echo "Cloning repository"
                 sh 'git clone https://github.com/SarjakBhandari/JenkinsAutomation'
@@ -38,7 +38,7 @@ pipeline {
                     def dbHostIP = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' healthify_db", returnStdout: true).trim()
                     def apiBaseUrl = "http://192.168.50.3:${API_PORT}/api"
 
-                    echo "Injecting DB_HOST=${dbHostIP} and API_BASE_URL=${apiBaseUrl}"
+                    echo " Injecting DB_HOST=${dbHostIP} and API_BASE_URL=${apiBaseUrl}"
 
                     sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' JenkinsAutomation/app/backend/.env"
                     def configPath = "JenkinsAutomation/app/frontend/src/config.js"
@@ -50,7 +50,7 @@ pipeline {
         stage('Build and Deploy Fullstack App on Staging Environment') {
             steps {
                 dir('JenkinsAutomation') {
-                    echo "Building and deploying backend and frontend"
+                    echo "🔨 Building and deploying backend and frontend"
                     sh 'docker-compose up -d --build'
                 }
             }
@@ -66,11 +66,12 @@ pipeline {
                                 -Dsonar.sources=JenkinsAutomation/app/backend/src/models/ \
                                 -Dsonar.host.url=http://192.168.50.4:9000 \
                                 -Dsonar.login=$SONAR_TOKEN
-                            '''
+                        '''
                     }
                 }
             }
         }
+
         stage('Quality Gate Check') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
@@ -87,10 +88,10 @@ pipeline {
                 }
 
                 timeout(time: 1, unit: 'DAYS') {
-                    input message: 'Visit the site and approve production deployment when ready.'
+                    input message: ' Visit the site and approve production deployment when ready.'
                 }
 
-                echo "Production deployment approved"
+                echo "🚀 Production deployment approved"
             }
         }
 
@@ -100,14 +101,38 @@ pipeline {
                     def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
                     def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
 
-                    echo "Tagging and pushing frontend image: ${frontendImage}"
-                    sh "docker tag healthify-frontend ${frontendImage}"
-                    sh "docker push ${frontendImage}"
+                    echo "🔍 Validating image existence and tagging"
 
-                    echo "Tagging and pushing backend image: ${backendImage}"
-                    sh "docker tag healthify-backend ${backendImage}"
-                    sh "docker push ${backendImage}"
+                    sh '''
+                        FRONTEND_ID=$(docker images -q healthify-frontend)
+                        BACKEND_ID=$(docker images -q healthify-backend)
+
+                        if [ -z "$FRONTEND_ID" ]; then
+                            echo "Frontend image not found. Aborting push."
+                            exit 1
+                        fi
+
+                        if [ -z "$BACKEND_ID" ]; then
+                            echo "Backend image not found. Aborting push."
+                            exit 1
+                        fi
+
+                        echo " Tagging images"
+                        docker tag $FRONTEND_ID ${REGISTRY}/healthify-frontend:${VERSION}
+                        docker tag $BACKEND_ID ${REGISTRY}/healthify-backend:${VERSION}
+
+                        echo " Pushing to local registry"
+                        docker push ${REGISTRY}/healthify-frontend:${VERSION}
+                        docker push ${REGISTRY}/healthify-backend:${VERSION}
+                    '''
                 }
+            }
+        }
+
+        stage('Archive Artifacts') {
+            steps {
+                echo "Archiving build artifacts"
+                archiveArtifacts artifacts: '**/Dockerfile, **/*.env, **/config.js', fingerprint: true
             }
         }
     }
