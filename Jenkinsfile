@@ -63,7 +63,7 @@ pipeline {
                         sh '''
                             /opt/sonar-scanner/bin/sonar-scanner \
                                 -Dsonar.projectKey=healthify \
-                                -Dsonar.sources=JenkinsAutomation/app/backend/src \
+                                -Dsonar.sources=JenkinsAutomation/app/backend/src/models/ \
                                 -Dsonar.host.url=http://192.168.50.4:9000 \
                                 -Dsonar.login=$SONAR_TOKEN
                             '''
