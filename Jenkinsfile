@@ -8,6 +8,8 @@ pipeline {
         DB_NAME = 'healthify'
         API_PORT = '5000'
         FRONTEND_PORT = '5173'
+        REGISTRY = "192.168.50.4:5000"
+        VERSION = "${BUILD_NUMBER}"
     }
 
     stages {
@@ -20,7 +22,7 @@ pipeline {
             }
         }
 
-        stage('creating database') {
+        stage('Creating Database') {
             steps {
                 dir('JenkinsAutomation') {
                     echo "Starting PostgreSQL container"
@@ -37,21 +39,42 @@ pipeline {
 
                     echo "Injecting DB_HOST=${dbHostIP} and API_BASE_URL=${apiBaseUrl}"
 
-                    // Update backend .env
                     sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' JenkinsAutomation/app/backend/.env"
-
-                    // Inject into frontend config.js
                     def configPath = "JenkinsAutomation/app/frontend/src/config.js"
                     sh "echo \"export const API_BASE_URL = '${apiBaseUrl}';\" > ${configPath}"
                 }
             }
         }
 
-        stage('Build and Deploy Fullstack App') {
+        stage('Build and Deploy Fullstack App on Staging Environment') {
             steps {
                 dir('JenkinsAutomation') {
                     echo "Building and deploying backend and frontend"
                     sh 'docker-compose up -d --build'
+                }
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                withSonarQubeEnv('SonarQube') {
+                    dir('JenkinsAutomation') {
+                        sh '''
+                            sonar-scanner \
+                            -Dsonar.projectKey=healthify \
+                            -Dsonar.sources=app \
+                            -Dsonar.host.url=http://192.168.50.4:9000 \
+                            -Dsonar.login=<your-sonar-token>
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Quality Gate Check') {
+            steps {
+                timeout(time: 2, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
@@ -68,6 +91,23 @@ pipeline {
                 }
 
                 echo "Production deployment approved"
+            }
+        }
+
+        stage('Push Images to Local Registry') {
+            steps {
+                script {
+                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
+                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+
+                    echo "Tagging and pushing frontend image: ${frontendImage}"
+                    sh "docker tag healthify-frontend ${frontendImage}"
+                    sh "docker push ${frontendImage}"
+
+                    echo "Tagging and pushing backend image: ${backendImage}"
+                    sh "docker tag healthify-backend ${backendImage}"
+                    sh "docker push ${backendImage}"
+                }
             }
         }
     }
