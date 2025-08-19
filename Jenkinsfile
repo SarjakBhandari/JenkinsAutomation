@@ -18,7 +18,7 @@ pipeline {
 
     stages {
 
-        stage('Prepare Workspace') {
+        stage('Preparing') {
             steps {
                 echo "🧹 Cleaning workspace"
                 deleteDir()
@@ -109,35 +109,40 @@ pipeline {
                 }
             }
         }
-        stage('loading') {
-            agent { label 'ProductionEnv' }
+       stage('Prepare Workspace') {
             steps {
-                deleteDir()
                 checkout scm
+                script {
+                    sh '''
+                    echo "📂 Workspace contents before stash:"
+                    ls -R | head -n 50
+                    '''
+                    def files = findFiles(glob: 'JenkinsAutomation/ansible/**')
+                    if (!files) {
+                        error "❌ No ansible files found to stash — check path and file names!"
+                    }
+                }
                 stash name: 'ansible-files', includes: 'JenkinsAutomation/ansible/**'
             }
         }
-        stage('Deploy to Swarm via Ansible') {
+
+       stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
             steps {
-                script {
-                    def registryIp = REGISTRY.split(':')[0]
-                    dir("${ANSIBLE_DIR}") {
-                        sh """
-                            echo '📂 Working directory:' && pwd
-                            echo '📄 Listing contents:' && ls -l
-                            test -f playbook.yml || { echo '❌ playbook.yml not found here'; exit 1; }
-                            ansible-playbook playbook.yml \
-                                --extra-vars "registry_ip=${registryIp} version=${VERSION}" \
-                                -u jenkins \
-                                --private-key ${SSH_KEY}
-                        """
-                    }
+                deleteDir()
+                unstash 'ansible-files'
+                dir('JenkinsAutomation/ansible') {
+                    sh '''
+                    echo "📂 Contents in Ansible dir:"
+                    ls -l
+                    ansible-playbook playbook.yml \
+                        --extra-vars "registry_ip=${REGISTRY.split(':')[0]} version=${VERSION}" \
+                        -u jenkins \
+                        --private-key ${SSH_KEY}
+                    '''
                 }
             }
         }
-
-
 
 
         stage('Confirm Ansible Deployment') {
