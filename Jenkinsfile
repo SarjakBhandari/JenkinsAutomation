@@ -29,11 +29,15 @@ pipeline {
         stage('Start DB Container') {
             steps {
                 dir('.') {
-                    echo "🐘 Starting PostgreSQL"
-                    sh 'docker-compose up -d postgres'
+                    echo "🐘 Starting PostgreSQL (clean start)"
+                    sh '''
+                        docker rm -f healthify_db 2>/dev/null || true
+                        docker-compose up -d postgres
+                    '''
                 }
             }
         }
+
 
         stage('Inject Environment Variables') {
             steps {
