@@ -12,7 +12,7 @@ pipeline {
         VERSION = "${BUILD_NUMBER}"
         SONAR_SCANNER_OPTS = "-Xmx1024m"
         SWARM_MANAGER_IP = "192.168.50.5"
-        ANSIBLE_DIR = "JenkinsAutomation/ansible"
+        ANSIBLE_DIR = "JenkinsAutomation/ansible/"
         SSH_KEY = "~/.ssh/id_rsa"
     }
 
@@ -107,6 +107,14 @@ pipeline {
                         docker push ${backendImage}
                     """
                 }
+            }
+        }
+        stage('Prepare Workspace') {
+            agent { label 'ProductionEnv' }
+            steps {
+                deleteDir()
+                checkout scm
+                stash name: 'ansible-files', includes: 'JenkinsAutomation/ansible/**'
             }
         }
         stage('Deploy to Swarm via Ansible') {
