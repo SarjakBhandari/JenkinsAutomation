@@ -109,7 +109,7 @@ pipeline {
                 }
             }
         }
-       stage('Prepare Workspace') {
+        stage('Prepare Workspace') {
             steps {
                 checkout scm
                 script {
@@ -117,23 +117,23 @@ pipeline {
                     echo "📂 Workspace contents before stash:"
                     ls -R | head -n 50
                     '''
-                    def files = findFiles(glob: 'JenkinsAutomation/ansible/**')
+                    def files = findFiles(glob: 'ansible/**')
                     if (!files) {
-                        error "❌ No ansible files found to stash — check path and file names!"
+                        error "❌ No ansible files found to stash — check path!"
                     }
                 }
-                stash name: 'ansible-files', includes: 'JenkinsAutomation/ansible/**'
+                stash name: 'ansible-files', includes: 'ansible/**'
             }
         }
 
-       stage('Deploy to Swarm via Ansible') {
+        stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
             steps {
                 deleteDir()
                 unstash 'ansible-files'
-                dir('JenkinsAutomation/ansible') {
+                dir('ansible') {
                     sh '''
-                    echo "📂 Contents in Ansible dir:"
+                    echo "📂 Contents in ansible dir after unstash:"
                     ls -l
                     ansible-playbook playbook.yml \
                         --extra-vars "registry_ip=${REGISTRY.split(':')[0]} version=${VERSION}" \
@@ -143,6 +143,7 @@ pipeline {
                 }
             }
         }
+
 
 
         stage('Confirm Ansible Deployment') {
