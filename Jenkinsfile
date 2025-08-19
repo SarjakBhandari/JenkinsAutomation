@@ -135,11 +135,12 @@ pipeline {
             steps {
                 dir('/ansible') {
                 sh """
-                    ansible-playbook playbook.yml \
-                    --extra-vars "registry_ip=${REGISTRY%:*} version=${VERSION}" \
-                    -u jenkins \
-                    --private-key ${SSH_KEY}
-                """
+                    ansible-playbook /ansible/playbook.yml \
+                        --extra-vars "registry_ip=\${REGISTRY%:*} version=${VERSION}" \
+                        -u jenkins \
+                        --private-key ${SSH_KEY}
+                    """
+
                 }
             }
         }
