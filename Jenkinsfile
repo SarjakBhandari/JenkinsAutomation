@@ -132,20 +132,16 @@ pipeline {
         }
 
         stage('Deploy to Swarm via Ansible') {
-            agent { label 'ProductionEnv' }
-            steps {
-                dir("${ANSIBLE_DIR}") {
-                    echo "🚢 Deploying stack to Swarm Manager as jenkins"
-                    sh """
-                        ansible-playbook playbook.yml \
-                        --extra-vars "registry_ip=\${REGISTRY%:*} version=${VERSION}" \
-                        -u jenkins \
-                        --private-key ${SSH_KEY}
-                    """
-                }
-            }
+        agent { label 'ProductionEnv' }
+        steps {
+            sh """
+            ansible-playbook /ansible/playbook.yml \
+                --extra-vars "registry_ip=${REGISTRY%:*} version=${VERSION}" \
+                -u jenkins \
+                --private-key ${SSH_KEY}
+            """
         }
-
+        }
 
         stage('Confirm Ansible Deployment') {
             steps {
