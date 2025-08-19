@@ -109,7 +109,7 @@ pipeline {
                 }
             }
         }
-        stage('Prepare Workspace') {
+        stage('loading') {
             agent { label 'ProductionEnv' }
             steps {
                 deleteDir()
