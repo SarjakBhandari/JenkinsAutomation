@@ -12,24 +12,23 @@ pipeline {
         VERSION = "${BUILD_NUMBER}"
         SONAR_SCANNER_OPTS = "-Xmx1024m"
         SWARM_MANAGER_IP = "192.168.50.5"
-        ANSIBLE_DIR = "JenkinsAutomation/ansible/"
+        ANSIBLE_DIR = "ansible"
         SSH_KEY = "~/.ssh/id_rsa"
     }
 
     stages {
-
         stage('Preparing') {
             steps {
                 echo "🧹 Cleaning workspace"
-                deleteDir()
+                cleanWs()
                 echo "📥 Cloning repository"
-                sh 'git clone https://github.com/SarjakBhandari/JenkinsAutomation'
+                checkout scm
             }
         }
 
         stage('Start DB Container') {
             steps {
-                dir('JenkinsAutomation') {
+                dir('.') {
                     echo "🐘 Starting PostgreSQL"
                     sh 'docker-compose up -d postgres'
                 }
@@ -42,18 +41,16 @@ pipeline {
                     def dbHostIP = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' healthify_db", returnStdout: true).trim()
                     def apiBaseUrl = "http://192.168.50.3:${API_PORT}/api"
                     echo "🔧 Injecting DB_HOST=${dbHostIP} and API_BASE_URL=${apiBaseUrl}"
-                    sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' JenkinsAutomation/app/backend/.env"
-                    sh "echo \"export const API_BASE_URL = '${apiBaseUrl}';\" > JenkinsAutomation/app/frontend/src/config.js"
+                    sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' app/backend/.env"
+                    sh "echo \"export const API_BASE_URL = '${apiBaseUrl}';\" > app/frontend/src/config.js"
                 }
             }
         }
 
         stage('Build and Deploy Staging') {
             steps {
-                dir('JenkinsAutomation') {
-                    echo "🔨 Building and deploying fullstack app (staging)"
-                    sh 'docker-compose up -d --build'
-                }
+                echo "🔨 Building and deploying fullstack app (staging)"
+                sh 'docker-compose up -d --build'
             }
         }
 
@@ -64,7 +61,7 @@ pipeline {
                         sh '''
                             /opt/sonar-scanner/bin/sonar-scanner \
                                 -Dsonar.projectKey=healthify \
-                                -Dsonar.sources=JenkinsAutomation/app/backend/src/models/ \
+                                -Dsonar.sources=app/backend/src/models/ \
                                 -Dsonar.host.url=http://192.168.50.4:9000 \
                                 -Dsonar.login=$SONAR_TOKEN
                         '''
@@ -109,61 +106,51 @@ pipeline {
                 }
             }
         }
-        stage('Prepare Workspace') {
-            steps {
-                checkout scm
-                script {
-                    sh '''
-                    echo "📂 Workspace contents before stash:"
-                    ls -R | head -n 50
-                    '''
-                    def files = findFiles(glob: 'ansible/**')
-                    if (!files) {
-                        error "❌ No ansible files found to stash — check path!"
-                    }
-                }
-                stash name: 'ansible-files', includes: 'ansible/**'
-            }
-        }
 
         stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
             steps {
-                deleteDir()
-                unstash 'ansible-files'
-                dir('ansible') {
+                cleanWs()
+                checkout scm
+                dir("${ANSIBLE_DIR}") {
+                    script {
+                        if (!fileExists('playbook.yml')) {
+                            error "❌ playbook.yml not found in ${ANSIBLE_DIR}"
+                        }
+                    }
                     sh '''
-                    echo "📂 Contents in ansible dir after unstash:"
-                    ls -l
-                    ansible-playbook playbook.yml \
-                        --extra-vars "registry_ip=${REGISTRY.split(':')[0]} version=${VERSION}" \
-                        -u jenkins \
-                        --private-key ${SSH_KEY}
+                        echo "📂 Running Ansible Swarm deployment"
+                        ansible-playbook playbook.yml \
+                            --extra-vars "registry_ip=${REGISTRY.split(':')[0]} version=${VERSION}" \
+                            -u jenkins \
+                            --private-key ${SSH_KEY}
                     '''
                 }
             }
         }
 
-
-
         stage('Confirm Ansible Deployment') {
             steps {
-                script {
-                    echo """
-                    ========================================================
-                    ✅  ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
-                    🌐  Frontend: http://${SWARM_MANAGER_IP}:5173
-                    🌐  Backend : http://${SWARM_MANAGER_IP}:5000
-                    ========================================================
-                    """
-                }
+                echo """
+                ========================================================
+                ✅  ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
+                🌐  Frontend: http://${SWARM_MANAGER_IP}:5173
+                🌐  Backend : http://${SWARM_MANAGER_IP}:5000
+                ========================================================
+                """
             }
         }
 
         stage('Deploy Monitoring via Ansible') {
             agent { label 'ProductionEnv' }
             steps {
+                checkout scm
                 dir("${ANSIBLE_DIR}") {
+                    script {
+                        if (!fileExists('monitoring.yml')) {
+                            error "❌ monitoring.yml not found in ${ANSIBLE_DIR}"
+                        }
+                    }
                     echo "📈 Deploying Prometheus & Grafana monitoring"
                     sh """
                         ansible-playbook monitoring.yml \
@@ -176,21 +163,17 @@ pipeline {
 
         stage('Confirm Monitoring & Print URLs') {
             steps {
-                script {
-                    echo """
-                    ========================================================
-                    📊  Monitoring is deploying on ProductionEnv
-                    🔗  Prometheus: http://${SWARM_MANAGER_IP}:9090
-                    🔗  Grafana   : http://${SWARM_MANAGER_IP}:3000
-                    👤  Grafana admin/admin123 (change after login)
-                    🔔  Alerts: defined in Prometheus (alert.rules.yml)
-                    ========================================================
-                    """
-                }
+                echo """
+                ========================================================
+                📊  Monitoring deployed
+                🔗  Prometheus: http://${SWARM_MANAGER_IP}:9090
+                🔗  Grafana   : http://${SWARM_MANAGER_IP}:3000
+                👤  Grafana admin/admin123 (change after login)
+                🔔  Alerts: defined in Prometheus (alert.rules.yml)
+                ========================================================
+                """
             }
         }
-
-        
 
         stage('Archive Artifacts') {
             steps {
