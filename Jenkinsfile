@@ -10,6 +10,7 @@ pipeline {
         FRONTEND_PORT = '5173'
         REGISTRY = "192.168.50.4:5000"
         VERSION = "${BUILD_NUMBER}"
+        SONAR_SCANNER_OPTS = "-Xmx1024m"
     }
 
     stages {
