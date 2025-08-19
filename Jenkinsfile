@@ -101,30 +101,18 @@ pipeline {
                     def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
                     def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
 
-                    echo "🔍 Validating image existence and tagging"
+                    echo "🔍 Locating built image names from Compose"
 
-                    sh '''
-                        FRONTEND_ID=$(docker images -q healthify-frontend)
-                        BACKEND_ID=$(docker images -q healthify-backend)
+                    def frontendSource = "jenkinsautomation_frontend"
+                    def backendSource  = "jenkinsautomation_backend"
 
-                        if [ -z "$FRONTEND_ID" ]; then
-                            echo "Frontend image not found. Aborting push."
-                            exit 1
-                        fi
+                    echo "🔖 Tagging and pushing frontend image: ${frontendImage}"
+                    sh "docker tag ${frontendSource} ${frontendImage}"
+                    sh "docker push ${frontendImage}"
 
-                        if [ -z "$BACKEND_ID" ]; then
-                            echo "Backend image not found. Aborting push."
-                            exit 1
-                        fi
-
-                        echo " Tagging images"
-                        docker tag $FRONTEND_ID ${REGISTRY}/healthify-frontend:${VERSION}
-                        docker tag $BACKEND_ID ${REGISTRY}/healthify-backend:${VERSION}
-
-                        echo " Pushing to local registry"
-                        docker push ${REGISTRY}/healthify-frontend:${VERSION}
-                        docker push ${REGISTRY}/healthify-backend:${VERSION}
-                    '''
+                    echo "🔖 Tagging and pushing backend image: ${backendImage}"
+                    sh "docker tag ${backendSource} ${backendImage}"
+                    sh "docker push ${backendImage}"
                 }
             }
         }
