@@ -138,12 +138,13 @@ PORT=${API_PORT}
             agent { label 'ProductionEnv' }
             steps {
                 dir("${ANSIBLE_DIR}") {
-    sh """
-      ansible-playbook playbook.yml \
-        --extra-vars "registry_ip=${REGISTRY%:*} version=${VERSION}" \
-        -u jenkins \
-        --private-key ${SSH_KEY}
-    """
+   sh """
+    ansible-playbook ${ANSIBLE_DIR}/playbook.yml \
+      --extra-vars "registry_ip=\${REGISTRY%:*} version=${VERSION}" \
+      -u jenkins \
+      --private-key ${SSH_KEY}
+"""
+
 }
 
 
