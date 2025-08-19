@@ -112,17 +112,21 @@ pipeline {
         stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
             steps {
-                dir('/ansible') {
-                sh """
-                    ansible-playbook /ansible/playbook.yml \
-                        --extra-vars "registry_ip=\${REGISTRY%:*} version=${VERSION}" \
-                        -u jenkins \
-                        --private-key ${SSH_KEY}
-                    """
-
+                script {
+                    def registryIp = REGISTRY.split(':')[0]
+                    dir('/ansible') {
+                        sh """
+                            test -f playbook.yml || { echo '❌ playbook.yml not found'; exit 1; }
+                            ansible-playbook playbook.yml \
+                            --extra-vars "registry_ip=${registryIp} version=${VERSION}" \
+                            -u jenkins \
+                            --private-key ${SSH_KEY}
+                        """
+                    }
                 }
             }
         }
+
 
 
         stage('Confirm Ansible Deployment') {
