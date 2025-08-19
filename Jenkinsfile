@@ -109,6 +109,27 @@ pipeline {
                 }
             }
         }
+        stage('Stop Non-Registry Containers on SlaveNode') {
+            agent { label 'SlaveNode' }
+            steps {
+                echo "🧹 Stopping containers on SlaveNode except registry"
+                sh '''
+                    registry_id=$(docker ps -q --filter "name=registry")
+                    docker ps -q | grep -v "$registry_id" | xargs -r docker stop
+                '''
+            }
+        }
+
+        stage('Stop Non-Registry Containers on ProductionEnv') {
+            agent { label 'ProductionEnv' }
+            steps {
+                echo "🧹 Stopping containers on ProductionEnv except registry"
+                sh '''
+                    registry_id=$(docker ps -q --filter "name=registry")
+                    docker ps -q | grep -v "$registry_id" | xargs -r docker stop
+                '''
+            }
+        }
 
         stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
@@ -117,13 +138,14 @@ pipeline {
                     echo "🚢 Deploying stack to Swarm Manager as jenkins"
                     sh """
                         ansible-playbook playbook.yml \
-                          --extra-vars "registry_ip=${REGISTRY%:*} version=${VERSION}" \
-                          -u jenkins \
-                          --private-key ${SSH_KEY}
+                        --extra-vars "registry_ip=\${REGISTRY%:*} version=${VERSION}" \
+                        -u jenkins \
+                        --private-key ${SSH_KEY}
                     """
                 }
             }
         }
+
 
         stage('Confirm Ansible Deployment') {
             steps {
@@ -169,27 +191,7 @@ pipeline {
             }
         }
 
-        stage('Stop Non-Registry Containers on SlaveNode') {
-            agent { label 'SlaveNode' }
-            steps {
-                echo "🧹 Stopping containers on SlaveNode except registry"
-                sh '''
-                    registry_id=$(docker ps -q --filter "name=registry")
-                    docker ps -q | grep -v "$registry_id" | xargs -r docker stop
-                '''
-            }
-        }
-
-        stage('Stop Non-Registry Containers on ProductionEnv') {
-            agent { label 'ProductionEnv' }
-            steps {
-                echo "🧹 Stopping containers on ProductionEnv except registry"
-                sh '''
-                    registry_id=$(docker ps -q --filter "name=registry")
-                    docker ps -q | grep -v "$registry_id" | xargs -r docker stop
-                '''
-            }
-        }
+        
 
         stage('Archive Artifacts') {
             steps {
