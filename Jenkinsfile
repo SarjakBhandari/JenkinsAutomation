@@ -53,8 +53,15 @@ pipeline {
 
         stage('Build and Deploy Staging') {
             steps {
-                echo "🔨 Building and deploying fullstack app (staging)"
-                sh 'docker-compose up -d --build'
+                dir('JenkinsAutomation') {
+                    echo "🧹 Removing stale app containers"
+                    sh '''
+                    docker rm -f healthify_backend 2>/dev/null || true
+                    docker rm -f healthify_frontend 2>/dev/null || true
+                    '''
+                    echo "🔨 Building and deploying fullstack app (staging)"
+                    sh 'docker-compose up -d --build'
+                }
             }
         }
 
