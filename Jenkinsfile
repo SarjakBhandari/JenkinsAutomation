@@ -11,55 +11,46 @@ pipeline {
         REGISTRY = "192.168.50.4:5000"
         VERSION = "${BUILD_NUMBER}"
         SONAR_SCANNER_OPTS = "-Xmx1024m"
-        SWARM_MANAGER_IP = "192.168.50.5"
-        ANSIBLE_DIR = "ansible"
-        SSH_KEY = "~/.ssh/id_rsa"
     }
 
     stages {
-        stage('Preparing') {
+        stage('Preparing Files') {
             steps {
-                echo "🧹 Cleaning workspace"
-                cleanWs()
-                echo "📥 Cloning repository"
-                checkout scm
+                echo "Cleaning workspace"
+                deleteDir()
+                echo "Cloning repository"
+                sh 'git clone https://github.com/SarjakBhandari/JenkinsAutomation'
             }
         }
 
-        stage('Start DB Container') {
+        stage('Creating Database') {
             steps {
-                dir('.') {
-                    echo "🐘 Starting PostgreSQL (clean start)"
-                    sh '''
-                        docker rm -f healthify_db 2>/dev/null || true
-                        docker-compose up -d postgres
-                    '''
+                dir('JenkinsAutomation') {
+                    echo "Starting PostgreSQL container"
+                    sh 'docker-compose up -d postgres'
                 }
             }
         }
 
-
-        stage('Inject Environment Variables') {
+        stage('Setting up Backend and Frontend Server') {
             steps {
                 script {
                     def dbHostIP = sh(script: "docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' healthify_db", returnStdout: true).trim()
                     def apiBaseUrl = "http://192.168.50.3:${API_PORT}/api"
-                    echo "🔧 Injecting DB_HOST=${dbHostIP} and API_BASE_URL=${apiBaseUrl}"
-                    sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' app/backend/.env"
-                    sh "echo \"export const API_BASE_URL = '${apiBaseUrl}';\" > app/frontend/src/config.js"
+
+                    echo "Injecting DB_HOST=${dbHostIP} and API_BASE_URL=${apiBaseUrl}"
+
+                    sh "sed -i '/^DB_HOST=/c\\DB_HOST=${dbHostIP}' JenkinsAutomation/app/backend/.env"
+                    def configPath = "JenkinsAutomation/app/frontend/src/config.js"
+                    sh "echo \"export const API_BASE_URL = '${apiBaseUrl}';\" > ${configPath}"
                 }
             }
         }
 
-        stage('Build and Deploy Staging') {
+        stage('Build and Deploy Fullstack App on Staging Environment') {
             steps {
                 dir('JenkinsAutomation') {
-                    echo "🧹 Removing stale app containers"
-                    sh '''
-                    docker rm -f healthify_backend 2>/dev/null || true
-                    docker rm -f healthify_frontend 2>/dev/null || true
-                    '''
-                    echo "🔨 Building and deploying fullstack app (staging)"
+                    echo "Building and deploying backend and frontend"
                     sh 'docker-compose up -d --build'
                 }
             }
@@ -72,16 +63,15 @@ pipeline {
                         sh '''
                             /opt/sonar-scanner/bin/sonar-scanner \
                                 -Dsonar.projectKey=healthify \
-                                -Dsonar.sources=app/backend/src/models/ \
+                                -Dsonar.sources=JenkinsAutomation/app/backend/src/models/ \
                                 -Dsonar.host.url=http://192.168.50.4:9000 \
                                 -Dsonar.login=$SONAR_TOKEN
-                        '''
+                            '''
                     }
                 }
             }
         }
-
-        stage('Quality Gate') {
+        stage('Quality Gate Check') {
             steps {
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
@@ -89,106 +79,35 @@ pipeline {
             }
         }
 
-        stage('Preview and Approval') {
+        stage('Preview Deployment') {
             steps {
                 script {
                     def previewUrl = "http://192.168.50.3:${FRONTEND_PORT}"
-                    echo "🌐 Preview your site at: ${previewUrl}"
+                    echo "Preview your site at: ${previewUrl}"
                 }
+
                 timeout(time: 1, unit: 'DAYS') {
-                    input message: '✅ Approve production deployment when ready.'
+                    input message: 'Visit the site and approve production deployment when ready.'
                 }
-                echo "🚀 Production deployment approved"
+
+                echo "Production deployment approved"
             }
         }
 
-        stage('Push to Local Registry') {
+        stage('Push Images to Local Registry') {
             steps {
                 script {
                     def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
                     def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
-                    echo "🔖 Tagging and pushing images"
-                    sh """
-                        docker tag jenkinsautomation_frontend ${frontendImage}
-                        docker push ${frontendImage}
-                        docker tag jenkinsautomation_backend ${backendImage}
-                        docker push ${backendImage}
-                    """
+
+                    echo "Tagging and pushing frontend image: ${frontendImage}"
+                    sh "docker tag healthify-frontend ${frontendImage}"
+                    sh "docker push ${frontendImage}"
+
+                    echo "Tagging and pushing backend image: ${backendImage}"
+                    sh "docker tag healthify-backend ${backendImage}"
+                    sh "docker push ${backendImage}"
                 }
-            }
-        }
-
-        stage('Deploy to Swarm via Ansible') {
-            agent { label 'ProductionEnv' }
-            steps {
-                cleanWs()
-                checkout scm
-                dir("${ANSIBLE_DIR}") {
-                    script {
-                        if (!fileExists('playbook.yml')) {
-                            error "❌ playbook.yml not found in ${ANSIBLE_DIR}"
-                        }
-                    }
-                    sh '''
-                        echo "📂 Running Ansible Swarm deployment"
-                        ansible-playbook playbook.yml \
-                            --extra-vars "registry_ip=${REGISTRY.split(':')[0]} version=${VERSION}" \
-                            -u jenkins \
-                            --private-key ${SSH_KEY}
-                    '''
-                }
-            }
-        }
-
-        stage('Confirm Ansible Deployment') {
-            steps {
-                echo """
-                ========================================================
-                ✅  ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
-                🌐  Frontend: http://${SWARM_MANAGER_IP}:5173
-                🌐  Backend : http://${SWARM_MANAGER_IP}:5000
-                ========================================================
-                """
-            }
-        }
-
-        stage('Deploy Monitoring via Ansible') {
-            agent { label 'ProductionEnv' }
-            steps {
-                checkout scm
-                dir("${ANSIBLE_DIR}") {
-                    script {
-                        if (!fileExists('monitoring.yml')) {
-                            error "❌ monitoring.yml not found in ${ANSIBLE_DIR}"
-                        }
-                    }
-                    echo "📈 Deploying Prometheus & Grafana monitoring"
-                    sh """
-                        ansible-playbook monitoring.yml \
-                          -u jenkins \
-                          --private-key ${SSH_KEY}
-                    """
-                }
-            }
-        }
-
-        stage('Confirm Monitoring & Print URLs') {
-            steps {
-                echo """
-                ========================================================
-                📊  Monitoring deployed
-                🔗  Prometheus: http://${SWARM_MANAGER_IP}:9090
-                🔗  Grafana   : http://${SWARM_MANAGER_IP}:3000
-                👤  Grafana admin/admin123 (change after login)
-                🔔  Alerts: defined in Prometheus (alert.rules.yml)
-                ========================================================
-                """
-            }
-        }
-
-        stage('Archive Artifacts') {
-            steps {
-                archiveArtifacts artifacts: '**/Dockerfile, **/*.env, **/config.js, ansible/files/*.yml', fingerprint: true
             }
         }
     }
@@ -196,18 +115,23 @@ pipeline {
     post {
         success {
             mail to: 'sarjakytdfiles@gmail.com',
-                 subject: '✅ BUILD SUCCESS',
-                 body: """Build #${BUILD_NUMBER} succeeded.
-App:    http://${SWARM_MANAGER_IP}:5173
-API:    http://${SWARM_MANAGER_IP}:5000
-Prom:   http://${SWARM_MANAGER_IP}:9090
-Grafana: http://${SWARM_MANAGER_IP}:3000 (admin/admin123)
-${BUILD_URL}"""
+                 subject: '✅ BUILD SUCCESS NOTIFICATION',
+                 body: """Hi Sarjak,
+
+Build #${BUILD_NUMBER} was successful. Visit: ${BUILD_URL}
+
+Regards,
+Jenkins"""
         }
         failure {
             mail to: 'sarjakytdfiles@gmail.com',
-                 subject: '❌ BUILD FAILURE',
-                 body: "Build #${BUILD_NUMBER} failed. Check logs: ${BUILD_URL}"
+                 subject: '❌ BUILD FAILED NOTIFICATION',
+                 body: """Hi Sarjak,
+
+Build #${BUILD_NUMBER} failed. Check logs: ${BUILD_URL}
+
+Regards,
+Jenkins"""
         }
     }
 }
