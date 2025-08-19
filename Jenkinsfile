@@ -12,7 +12,7 @@ pipeline {
         VERSION           = "${BUILD_NUMBER}"
         SONAR_SCANNER_OPTS= "-Xmx1024m"
         SWARM_MANAGER_IP  = "192.168.50.5"
-        ANSIBLE_DIR       = "JenkinsAutomation/ansible"
+        ANSIBLE_DIR       = "JenkinsAutomation/Prod"
         SSH_KEY           = "~/.ssh/id_rsa"
         HOST_IP           = "192.168.50.3"
 
@@ -137,12 +137,14 @@ PORT=${API_PORT}
             agent { label 'ProductionEnv' }
             steps {
                 dir("${ANSIBLE_DIR}") {
-   sh """
+def registryIpOnly = REGISTRY.split(':')[0]
+sh """
     ansible-playbook ${ANSIBLE_DIR}/playbook.yml \
-      --extra-vars "registry_ip=\${REGISTRY%:*} version=${VERSION}" \
+      --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
       -u jenkins \
       --private-key ${SSH_KEY}
 """
+
 
 }
 
@@ -166,7 +168,7 @@ PORT=${API_PORT}
             agent { label 'ProductionEnv' }
             steps {
                 dir("${ANSIBLE_DIR}") {
-                    echo "📈 Deploying Prometheus & Grafana monitoring"
+                    echo "Deploying Prometheus & Grafana monitoring"
                     sh """
                         ansible-playbook monitoring.yml \
                             -u jenkins \
