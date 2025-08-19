@@ -14,7 +14,9 @@ pipeline {
         SWARM_MANAGER_IP  = "192.168.50.5"
         ANSIBLE_DIR       = "JenkinsAutomation/ansible"
         SSH_KEY           = "~/.ssh/id_rsa"
-        HOST_IP           = "192.168.50.3"   // static lab IP; adjust if needed
+        HOST_IP           = "192.168.50.3"
+        ANSIBLE_DIR = "JenkinsAutomation/ansible"
+
     }
 
     stages {
@@ -135,14 +137,16 @@ PORT=${API_PORT}
         stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
             steps {
-                dir('/ansible') {
-                    sh """
-                        ansible-playbook /ansible/playbook.yml \
-                            --extra-vars "registry_ip=\${REGISTRY%:*} version=${VERSION}" \
-                            -u jenkins \
-                            --private-key ${SSH_KEY}
-                    """
-                }
+                dir("${ANSIBLE_DIR}") {
+    sh """
+      ansible-playbook playbook.yml \
+        --extra-vars "registry_ip=${REGISTRY%:*} version=${VERSION}" \
+        -u jenkins \
+        --private-key ${SSH_KEY}
+    """
+}
+
+
             }
         }
 
