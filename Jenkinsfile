@@ -114,18 +114,21 @@ pipeline {
             steps {
                 script {
                     def registryIp = REGISTRY.split(':')[0]
-                    dir('/ansible') {
+                    dir("${ANSIBLE_DIR}") {
                         sh """
-                            test -f playbook.yml || { echo '❌ playbook.yml not found'; exit 1; }
+                            echo '📂 Working directory:' && pwd
+                            echo '📄 Listing contents:' && ls -l
+                            test -f playbook.yml || { echo '❌ playbook.yml not found here'; exit 1; }
                             ansible-playbook playbook.yml \
-                            --extra-vars "registry_ip=${registryIp} version=${VERSION}" \
-                            -u jenkins \
-                            --private-key ${SSH_KEY}
+                                --extra-vars "registry_ip=${registryIp} version=${VERSION}" \
+                                -u jenkins \
+                                --private-key ${SSH_KEY}
                         """
                     }
                 }
             }
         }
+
 
 
 
