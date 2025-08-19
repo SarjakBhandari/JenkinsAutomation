@@ -58,19 +58,18 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
-                    dir('JenkinsAutomation') {
+                    withCredentials([string(credentialsId: 'sonar-token-id', variable: 'SONAR_TOKEN')]) {
                         sh '''
-                            sonar-scanner \
+                        sonar-scanner \
                             -Dsonar.projectKey=healthify \
                             -Dsonar.sources=app \
                             -Dsonar.host.url=http://192.168.50.4:9000 \
-                            -Dsonar.login=<your-sonar-token>
+                            -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
                 }
             }
         }
-
         stage('Quality Gate Check') {
             steps {
                 timeout(time: 2, unit: 'MINUTES') {
