@@ -64,7 +64,7 @@ services:
     env_file:
       - {{ env_file }}
     environment:
-      API_BASE_URL: "http://192.168.50.4:{{ backend_port | default('5050') }}"
+      API_BASE_URL: "http://{{ backend_host }}:{{ backend_port | default('5050') }}"
     ports:
       - "{{ frontend_port | default('5173') }}:5173"
     networks:
