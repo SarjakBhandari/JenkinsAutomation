@@ -1,74 +1,30 @@
----
-- name: Deploy Healthify Stack to Docker Swarm
-  hosts: swarm_manager
-  become: false
+- name: Deploy Healthify stack to Docker Swarm
+  hosts: swarm_managers
+  become: true
   vars:
-    registry_ip: "192.168.50.4"
-    version: "latest"
+    overlay_network: healthify_net
+    registry_ip: 192.168.1.100
+    version: "v1.2.3"
+    env_file: "/opt/healthify/.env"
+    backend_port: "5050"
+    frontend_port: "5173"
+    backend_host: "backend"
 
   tasks:
 
-    - name: Validate registry_ip and version
-      fail:
-        msg: "Missing registry_ip or version. Cannot deploy services."
-      when: registry_ip | length == 0 or version | length == 0
+    - name: Ensure overlay network exists
+      command: docker network create --driver overlay {{ overlay_network }}
+      register: network_create
+      failed_when: network_create.rc != 0 and 'already exists' not in network_create.stderr
+      changed_when: "'already exists' not in network_create.stderr"
 
-    - name: Ensure node is a Swarm manager
-      command: docker info --format="{{ '{{.Swarm.ControlAvailable}}' }}"
-      register: is_manager
-      changed_when: false
+    - name: Template Docker stack file
+      template:
+        src: ./files/docker-stack.yml.j2
+        dest: /tmp/docker-stack.yml
+        mode: '0644'
 
-    - name: Fail if not a manager
-      fail:
-        msg: "This node is not a Swarm manager. Cannot create overlay network or deploy services."
-      when: is_manager.stdout != "true"
-
-    - name: Create overlay network if not exists
-      shell: |
-        docker network inspect healthify_net >/dev/null 2>&1 || \
-        docker network create --driver overlay --attachable healthify_net
+    - name: Deploy Docker stack
+      command: docker stack deploy -c /tmp/docker-stack.yml healthify
       args:
         warn: false
-      register: overlay_net_result
-      changed_when: "'Created' in overlay_net_result.stdout"
-
-    - name: Check if backend service exists
-      shell: docker service inspect healthify_backend
-      register: backend_check
-      ignore_errors: true
-      changed_when: false
-
-    - name: Deploy backend service if not exists
-      shell: |
-        docker service create \
-          --name healthify_backend \
-          --network healthify_net \
-          --replicas 1 \
-          --env DB_USER=postgres \
-          --env DB_PASSWORD=postgres \
-          --env DB_NAME=healthify \
-          --env PORT=5000 \
-          --publish published=5000,target=5000 \
-          {{ registry_ip }}/healthify-backend:{{ version }}
-      when: backend_check.rc != 0
-      register: backend_result
-      changed_when: true
-
-    - name: Check if frontend service exists
-      shell: docker service inspect healthify_frontend
-      register: frontend_check
-      ignore_errors: true
-      changed_when: false
-
-    - name: Deploy frontend service if not exists
-      shell: |
-        docker service create \
-          --name healthify_frontend \
-          --network healthify_net \
-          --replicas 1 \
-          --env PORT=5173 \
-          --publish published=5173,target=5173 \
-          {{ registry_ip }}/healthify-frontend:{{ version }}
-      when: frontend_check.rc != 0
-      register: frontend_result
-      changed_when: true
