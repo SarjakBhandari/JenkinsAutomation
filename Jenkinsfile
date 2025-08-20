@@ -91,17 +91,35 @@ pipeline {
             }
         }
 
-       
         stage('Tag and Push Images') {
             steps {
                 script {
                     def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
                     def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+
+                    def frontendId = sh(script: "docker inspect -f '{{.Image}}' $(docker ps -qf name=healthify_frontend)", returnStdout: true).trim()
+                    def backendId  = sh(script: "docker inspect -f '{{.Image}}' $(docker ps -qf name=healthify_backend)", returnStdout: true).trim()
+
                     sh """
-                        docker tag healthify_frontend ${frontendImage}
+                        docker tag ${frontendId} ${frontendImage}
                         docker push ${frontendImage}
-                        docker tag healthify_backend ${backendImage}
+                        docker tag ${backendId} ${backendImage}
                         docker push ${backendImage}
+                    """
+                }
+            }
+        }
+
+        stage('Pre-pull Images on Jenkins') {
+            agent { label 'ProductionEnv' }
+            steps {
+                script {
+                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
+                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+                    echo "📥 Verifying image availability before deploy"
+                    sh """
+                        docker pull ${frontendImage} || echo "⚠️ Frontend image not found"
+                        docker pull ${backendImage}  || echo "⚠️ Backend image not found"
                     """
                 }
             }
@@ -140,21 +158,6 @@ Backend : http://${SWARM_MANAGER_IP}:5000
 """
             }
         }
-
-         stage('Pre-pull Images') {
-            agent { label 'ProductionEnv' }
-            steps {
-                script {
-                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
-                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
-                    sh """
-                        docker pull ${frontendImage} || echo "Image not found, will build"
-                        docker pull ${backendImage}  || echo "Image not found, will build"
-                    """
-                }
-            }
-        }
-
 
         stage('Deploy Monitoring via Ansible') {
             agent { label 'ProductionEnv' }
