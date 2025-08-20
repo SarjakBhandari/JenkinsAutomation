@@ -122,25 +122,32 @@ stage('Tag and Push Images') {
 
 
 
-        stage('Deploy to Swarm via Ansible') {
-            agent { label 'ProductionEnv' }
-            steps {
-                script {
-                    def registryIpOnly = REGISTRY.split(':')[0]
-                    dir("${ANSIBLE_DIR}") {
-                        echo "Running Ansible playbook for Swarm deployment"
-                        sh """
-                            pwd
-                            ls -l
-                            ansible-playbook playbook.yml \
-                                --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
-                                -u jenkins \
-                                --private-key ${SSH_KEY}
-                        """
+        pipeline {
+            agent any
+            stages {
+                stage('Install Ansible Collections') {
+                steps {
+                    sh '''
+                    ansible-galaxy collection install -r requirements.yml || {
+                        echo "❌ Failed to install required Ansible collections" && exit 1
                     }
+                    '''
+                }
+                }
+
+                stage('Run Playbook') {
+                steps {
+                    sh '''
+                    ansible-playbook playbook.yml \
+                        --extra-vars "registry_ip=192.168.50.4 version=174" \
+                        -u jenkins \
+                        --private-key /home/jenkins/.ssh/id_rsa
+                    '''
+                }
                 }
             }
-        }
+            }
+
 
         stage('Confirm Ansible Deployment') {
             steps {
