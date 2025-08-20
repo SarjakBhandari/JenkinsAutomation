@@ -18,11 +18,12 @@ pipeline {
     }
 
     stages {
+
         stage('Prepare Workspace') {
             steps {
-                echo "Cleaning workspace"
+                echo "🧹 Cleaning workspace"
                 deleteDir()
-                echo "Cloning repository"
+                echo "📥 Cloning repository"
                 sh 'git clone https://github.com/SarjakBhandari/JenkinsAutomation'
             }
         }
@@ -31,7 +32,7 @@ pipeline {
             steps {
                 script {
                     def apiBaseUrl = "http://${HOST_IP}:${API_PORT}/api"
-                    echo "Setting DB_HOST=healthify_db and API_BASE_URL=${apiBaseUrl}"
+                    echo "⚙️ Injecting environment configs"
                     writeFile file: 'JenkinsAutomation/app/backend/.env', text: """
                     PORT=${API_PORT}
                     DB_HOST=healthify_db
@@ -50,12 +51,9 @@ pipeline {
         stage('Build and Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
-                    echo "Building and deploying fullstack app (staging)"
+                    echo "🐳 Building and starting staging stack (Docker Compose)"
                     sh '''
-                        echo "Stopping and removing existing containers"
                         docker-compose down --remove-orphans --volumes || true
-
-                        echo "Rebuilding and recreating containers"
                         docker-compose up -d --build --force-recreate
                     '''
                 }
@@ -66,6 +64,7 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: 'sonar-token-id', variable: 'SONAR_TOKEN')]) {
+                        echo "🔍 Running SonarQube scan"
                         sh '''
                             /opt/sonar-scanner/bin/sonar-scanner \
                                 -Dsonar.projectKey=healthify \
@@ -80,6 +79,7 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
+                echo "⏳ Waiting for quality gate"
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
@@ -90,37 +90,33 @@ pipeline {
             steps {
                 script {
                     def previewUrl = "http://${HOST_IP}:${FRONTEND_PORT}"
-                    echo "Preview your site at: ${previewUrl}"
+                    echo "🖥 Preview your app at: ${previewUrl}"
                 }
                 timeout(time: 1, unit: 'DAYS') {
-                    input message: 'Approve production deployment when ready.'
+                    input message: '✅ Approve production deployment when ready.'
                 }
-                echo "Production deployment approved"
             }
         }
 
-stage('Tag and Push Images') {
-    steps {
-            script {
-                def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
-                def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+        stage('Tag and Push Images') {
+            steps {
+                script {
+                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
+                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+                    echo "📦 Tagging & pushing images to registry ${REGISTRY}"
 
-                // Get container image IDs
-                def frontendId = sh(script: "docker inspect -f '{{.Image}}' healthify_frontend", returnStdout: true).trim()
-                def backendId  = sh(script: "docker inspect -f '{{.Image}}' healthify_backend", returnStdout: true).trim()
+                    def frontendId = sh(script: "docker inspect -f '{{.Image}}' healthify_frontend", returnStdout: true).trim()
+                    def backendId  = sh(script: "docker inspect -f '{{.Image}}' healthify_backend", returnStdout: true).trim()
 
-                // Tag and push
-                sh """
-                    docker tag ${frontendId} ${frontendImage}
-                    docker push ${frontendImage}
-                    docker tag ${backendId} ${backendImage}
-                    docker push ${backendImage}
-                """
+                    sh """
+                        docker tag ${frontendId} ${frontendImage}
+                        docker push ${frontendImage}
+                        docker tag ${backendId} ${backendImage}
+                        docker push ${backendImage}
+                    """
+                }
             }
         }
-    }
-
-
 
         stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
@@ -128,21 +124,13 @@ stage('Tag and Push Images') {
                 script {
                     def registryIpOnly = REGISTRY.split(':')[0]
                     dir("${ANSIBLE_DIR}") {
-                        echo "Running Ansible playbook for Swarm deployment"
+                        echo "🚀 Deploying stack to Docker Swarm"
                         sh """
-                            pwd
-                            ls -l
-                            ansible-galaxy collection install -r requirements.yml --force || {
-                                echo "❌ Failed to install required Ansible collections"
-                                exit 1
-                            }
-
                             ansible-playbook playbook.yml \
                                 --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
                                 -u jenkins \
                                 --private-key ${SSH_KEY}
                         """
-
                     }
                 }
             }
@@ -152,7 +140,7 @@ stage('Tag and Push Images') {
             steps {
                 echo """
 ========================================================
-ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
+✅ ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
 Frontend: http://${SWARM_MANAGER_IP}:5173
 Backend : http://${SWARM_MANAGER_IP}:5000
 ========================================================
@@ -164,7 +152,7 @@ Backend : http://${SWARM_MANAGER_IP}:5000
             agent { label 'ProductionEnv' }
             steps {
                 dir("${ANSIBLE_DIR}") {
-                    echo "Deploying Prometheus & Grafana monitoring"
+                    echo "📊 Deploying monitoring stack"
                     sh """
                         ansible-playbook monitoring.yml \
                             -u jenkins \
@@ -178,7 +166,7 @@ Backend : http://${SWARM_MANAGER_IP}:5000
             steps {
                 echo """
 ========================================================
-Monitoring deployed on ProductionEnv
+📈 Monitoring deployed
 Prometheus: http://${SWARM_MANAGER_IP}:9090
 Grafana   : http://${SWARM_MANAGER_IP}:3000
 Grafana credentials: admin/admin123
@@ -187,24 +175,14 @@ Grafana credentials: admin/admin123
             }
         }
 
-        stage('Archive Artifacts') {
-            steps {
-                archiveArtifacts artifacts: '**/Dockerfile, **/*.env, **/config.js, ansible/files/*.yml', fingerprint: true
-                    }
-                }
         stage('Validate Swarm Health') {
             agent { label 'ProductionEnv' }
             steps {
-                echo "Checking Swarm node status and service health"
+                echo "🩺 Checking Swarm node and service health"
                 sh """
                     ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
-                        echo "🔍 Docker Node Status:"
-                        docker node ls
-
-                        echo "🔍 Service Status:"
-                        docker service ls
-
-                        echo "🔍 Unhealthy Containers:"
+                        docker node ls &&
+                        docker service ls &&
                         docker ps --filter "health=unhealthy"
                     '
                 """
@@ -214,7 +192,7 @@ Grafana credentials: admin/admin123
         stage('Check Container Resource Usage') {
             agent { label 'ProductionEnv' }
             steps {
-                echo "Checking container CPU and memory usage"
+                echo "📊 Checking container resource usage"
                 sh """
                     ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
                         docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
@@ -226,7 +204,7 @@ Grafana credentials: admin/admin123
         stage('Cleanup Dangling Images') {
             agent { label 'ProductionEnv' }
             steps {
-                echo "Cleaning up unused Docker images"
+                echo "🧹 Cleaning up unused Docker images"
                 sh """
                     ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
                         docker image prune -f

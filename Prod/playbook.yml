@@ -1,5 +1,5 @@
 ---
-- name: Deploy healthify fullstack app with load balancing
+- name: Deploy healthify fullstack app with load balancing (CLI only)
   hosts: swarm_manager
   become: yes
   vars:
@@ -17,45 +17,41 @@
           docker network create --driver overlay --attachable {{ overlay_network }}
         fi
       changed_when: false
-      
+
     - name: Upload .env file to manager node
-      copy:
+      ansible.builtin.copy:
         src: files/env/.env
         dest: "{{ env_file }}"
         mode: '0644'
 
     - name: Render docker-stack.yml from template
-      template:
+      ansible.builtin.template:
         src: files/docker-stack.yml.j2
         dest: "{{ stack_file }}"
         mode: '0644'
 
     - name: Pull backend image from registry
-      community.docker.docker_image:
-        name: "{{ registry_ip }}:5000/healthify-backend"
-        tag: "{{ version }}"
-        source: pull
+      ansible.builtin.shell: >
+        docker pull {{ registry_ip }}:5000/healthify-backend:{{ version }}
+      changed_when: false
 
     - name: Pull frontend image from registry
-      community.docker.docker_image:
-        name: "{{ registry_ip }}:5000/healthify-frontend"
-        tag: "{{ version }}"
-        source: pull
+      ansible.builtin.shell: >
+        docker pull {{ registry_ip }}:5000/healthify-frontend:{{ version }}
+      changed_when: false
 
-    - name: Deploy Docker stack with replicated services
-      community.docker.docker_stack:
-        name: "{{ stack_name }}"
-        state: present
-        compose:
-          - "{{ stack_file }}"
-        prune: yes
+    - name: Deploy or update Docker stack
+      ansible.builtin.shell: >
+        docker stack deploy --with-registry-auth -c {{ stack_file }} {{ stack_name }}
+      changed_when: false
 
     - name: Wait for services to stabilize
-      shell: |
+      ansible.builtin.shell: |
+        sleep 5
         docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}'
       register: service_status
       changed_when: false
 
     - name: Display deployed services
-      debug:
+      ansible.builtin.debug:
         msg: "{{ service_status.stdout_lines }}"
