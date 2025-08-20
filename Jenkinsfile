@@ -119,31 +119,35 @@ pipeline {
         }
 
         stage('Deploy to Swarm via Ansible') {
-            agent { label 'ProductionEnv' }
-            steps {
-                script {
-                    def registryIpOnly = REGISTRY.split(':')[0]
-                    dir("${ANSIBLE_DIR}") {
-                        echo "🔗 Ensuring overlay network exists before deploy"
-                    sh """
-                        ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-                            -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} \
-                            'docker network inspect healthify_net >/dev/null 2>&1 || \
-                            docker network create --driver overlay --attachable healthify_net'
-                    """
+    agent { label 'ProductionEnv' }
+    steps {
+        script {
+            // Extract IP without port from REGISTRY
+            def registryIpOnly = REGISTRY.split(':')[0]
 
-                        echo "🚀 Deploying stack to Docker Swarm"
-                        sh """
-                            ansible-playbook playbook.yml \
-    -u jenkins \
-    --private-key ${SSH_KEY} \
-    --extra-vars "registry_ip=${REGISTRY_IP} version=${VERSION}"
+            dir("${ANSIBLE_DIR}") {
+                echo "🔗 Ensuring overlay network exists before deploy"
+                sh """
+                    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+                        -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} \
+                        'docker network inspect healthify_net >/dev/null 2>&1 || \
+                        docker network create --driver overlay --attachable healthify_net'
+                """
 
-                        """
-                    }
-                }
+                echo "🚀 Deploying stack to Docker Swarm"
+                echo "DEBUG → registry_ip=${registryIpOnly}, version=${VERSION}"
+
+                sh """
+                    ansible-playbook playbook.yml \
+                        -u jenkins \
+                        --private-key ${SSH_KEY} \
+                        --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}"
+                """
             }
         }
+    }
+}
+
 
 
         stage('Confirm Ansible Deployment') {
