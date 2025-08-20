@@ -122,9 +122,7 @@ pipeline {
     agent { label 'ProductionEnv' }
     steps {
         script {
-            // Extract IP without port from REGISTRY
             def registryIpOnly = REGISTRY.split(':')[0]
-
             dir("${ANSIBLE_DIR}") {
                 echo "🔗 Ensuring overlay network exists before deploy"
                 sh """
@@ -147,6 +145,11 @@ pipeline {
         }
     }
 }
+
+stage('Deploy Monitoring via Ansible') {
+    agent { label 'ProductionEnv' }
+    steps {
+        script
 
 
 
