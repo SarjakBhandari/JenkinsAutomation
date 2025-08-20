@@ -12,7 +12,7 @@ pipeline {
         VERSION            = "${BUILD_NUMBER}"
         SONAR_SCANNER_OPTS = "-Xmx1024m"
         SWARM_MANAGER_IP   = "192.168.50.5"
-        ANSIBLE_DIR        = "JenkinsAutomation/Prod"
+        ANSIBLE_DIR        = "Presentation/Prod"
         SSH_KEY            = "~/.ssh/id_rsa"
         HOST_IP            = "192.168.50.3"
     }
