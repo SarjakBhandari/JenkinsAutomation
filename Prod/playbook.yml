@@ -4,7 +4,7 @@
   become: false
   vars:
     registry_ip: "192.168.50.4"  
-    version: "v2"              
+    version: "latest"              
 
   tasks:
 
