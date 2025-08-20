@@ -2,28 +2,27 @@ pipeline {
     agent { label 'SlaveNode' }
 
     environment {
-        DOCKER_HOST       = 'unix:///var/run/docker.sock'
-        DB_USER           = 'postgres'
-        DB_PASSWORD       = 'postgres'
-        DB_NAME           = 'healthify'
-        API_PORT          = '5000'
-        FRONTEND_PORT     = '5173'
-        REGISTRY          = "192.168.50.4:5000"
-        VERSION           = "${BUILD_NUMBER}"
-        SONAR_SCANNER_OPTS= "-Xmx1024m"
-        SWARM_MANAGER_IP  = "192.168.50.5"
-        ANSIBLE_DIR       = "JenkinsAutomation/Prod"
-        SSH_KEY           = "~/.ssh/id_rsa"
-        HOST_IP           = "192.168.50.3"
-
+        DOCKER_HOST        = 'unix:///var/run/docker.sock'
+        DB_USER            = 'postgres'
+        DB_PASSWORD        = 'postgres'
+        DB_NAME            = 'healthify'
+        API_PORT           = '5000'
+        FRONTEND_PORT      = '5173'
+        REGISTRY           = "192.168.50.4:5000"
+        VERSION            = "${BUILD_NUMBER}"
+        SONAR_SCANNER_OPTS = "-Xmx1024m"
+        SWARM_MANAGER_IP   = "192.168.50.5"
+        ANSIBLE_DIR        = "JenkinsAutomation/Prod"
+        SSH_KEY            = "~/.ssh/id_rsa"
+        HOST_IP            = "192.168.50.3"
     }
 
     stages {
         stage('Prepare Workspace') {
             steps {
-                echo "🧹 Cleaning workspace"
+                echo "Cleaning workspace"
                 deleteDir()
-                echo "📥 Cloning repository"
+                echo "Cloning repository"
                 sh 'git clone https://github.com/SarjakBhandari/JenkinsAutomation'
             }
         }
@@ -31,7 +30,7 @@ pipeline {
         stage('Start DB Container') {
             steps {
                 dir('JenkinsAutomation') {
-                    echo "🐘 Starting PostgreSQL (clean slate)"
+                    echo "Starting PostgreSQL (clean slate)"
                     sh '''
                         docker rm -f healthify_backend healthify_frontend healthify_db 2>/dev/null || true
                         docker-compose down -v || true
@@ -45,9 +44,8 @@ pipeline {
             steps {
                 script {
                     def apiBaseUrl = "http://${HOST_IP}:${API_PORT}/api"
-                    echo "🔧 Setting DB_HOST=healthify_db and API_BASE_URL=${apiBaseUrl}"
+                    echo "Setting DB_HOST=healthify_db and API_BASE_URL=${apiBaseUrl}"
 
-                    // backend .env (read by Node app)
                     writeFile file: 'JenkinsAutomation/app/backend/.env', text: """
 DB_HOST=healthify_db
 DB_USER=${DB_USER}
@@ -56,7 +54,6 @@ DB_NAME=${DB_NAME}
 PORT=${API_PORT}
 """
 
-                    // frontend config.js (used in browser)
                     writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
                               text: "export const API_BASE_URL = '${apiBaseUrl}';\n"
                 }
@@ -66,7 +63,7 @@ PORT=${API_PORT}
         stage('Build and Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
-                    echo "🔨 Building and deploying fullstack app (staging)"
+                    echo "Building and deploying fullstack app (staging)"
                     sh '''
                         docker rm -f healthify_backend healthify_frontend 2>/dev/null || true
                         docker-compose down -v || true
@@ -105,12 +102,12 @@ PORT=${API_PORT}
             steps {
                 script {
                     def previewUrl = "http://${HOST_IP}:${FRONTEND_PORT}"
-                    echo "🌐 Preview your site at: ${previewUrl}"
+                    echo "Preview your site at: ${previewUrl}"
                 }
                 timeout(time: 1, unit: 'DAYS') {
-                    input message: '✅ Approve production deployment when ready.'
+                    input message: 'Approve production deployment when ready.'
                 }
-                echo "🚀 Production deployment approved"
+                echo "Production deployment approved"
             }
         }
 
@@ -136,19 +133,17 @@ PORT=${API_PORT}
         stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
             steps {
-                dir("${ANSIBLE_DIR}") {
-def registryIpOnly = REGISTRY.split(':')[0]
-sh """
-    ansible-playbook ${ANSIBLE_DIR}/playbook.yml \
-      --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
-      -u jenkins \
-      --private-key ${SSH_KEY}
-"""
-
-
-}
-
-
+                script {
+                    def registryIpOnly = REGISTRY.split(':')[0]
+                    dir("${ANSIBLE_DIR}") {
+                        sh """
+                            ansible-playbook playbook.yml \
+                                --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
+                                -u jenkins \
+                                --private-key ${SSH_KEY}
+                        """
+                    }
+                }
             }
         }
 
@@ -156,9 +151,9 @@ sh """
             steps {
                 echo """
 ========================================================
-✅ ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
-🌐 Frontend: http://${SWARM_MANAGER_IP}:5173
-🌐 Backend : http://${SWARM_MANAGER_IP}:5000
+ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
+Frontend: http://${SWARM_MANAGER_IP}:5173
+Backend : http://${SWARM_MANAGER_IP}:5000
 ========================================================
 """
             }
@@ -182,10 +177,10 @@ sh """
             steps {
                 echo """
 ========================================================
-📊 Monitoring deployed on ProductionEnv
-🔗 Prometheus: http://${SWARM_MANAGER_IP}:9090
-🔗 Grafana   : http://${SWARM_MANAGER_IP}:3000
-👤 Grafana admin/admin123 (change after login)
+Monitoring deployed on ProductionEnv
+Prometheus: http://${SWARM_MANAGER_IP}:9090
+Grafana   : http://${SWARM_MANAGER_IP}:3000
+Grafana credentials: admin/admin123
 ========================================================
 """
             }
@@ -201,17 +196,17 @@ sh """
     post {
         success {
             mail to: 'sarjakytdfiles@gmail.com',
-                 subject: '✅ BUILD SUCCESS',
+                 subject: 'BUILD SUCCESS',
                  body: """Build #${BUILD_NUMBER} succeeded.
 App: http://${SWARM_MANAGER_IP}:5173
 API: http://${SWARM_MANAGER_IP}:5000
-Prom: http://${SWARM_MANAGER_IP}:9090
+Prometheus: http://${SWARM_MANAGER_IP}:9090
 Grafana: http://${SWARM_MANAGER_IP}:3000 (admin/admin123)
 ${BUILD_URL}"""
         }
         failure {
             mail to: 'sarjakytdfiles@gmail.com',
-                 subject: '❌ BUILD FAILURE',
+                 subject: 'BUILD FAILURE',
                  body: "Build #${BUILD_NUMBER} failed. Check logs: ${BUILD_URL}"
         }
     }
