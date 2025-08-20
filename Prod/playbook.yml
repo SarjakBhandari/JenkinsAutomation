@@ -1,74 +1,43 @@
 ---
-- name: Deploy healthify fullstack app with load balancing (CLI only)
-  hosts: swarm_manager
-  become: yes
-
-  # Safe defaults — CLI `--extra-vars` still override these
+- name: Deploy Healthify Stack to Docker Swarm
+  hosts: all
+  become: false
   vars:
-    stack_name: healthify
-    registry_ip: 192.168.50.4
-    version: latest
-    overlay_network: healthify_net
-    stack_file: "/home/{{ ansible_user }}/docker-stack.yml"
-    env_file: "/home/{{ ansible_user }}/.env"
-    backend_port: 5000
-    frontend_port: 5173
+    registry_ip: ""
+    version: ""
 
   tasks:
 
-    - name: Show resolved overlay_network value
-      ansible.builtin.debug:
-        msg: "Overlay network = {{ overlay_network }}"
-
-    - name: Upload .env file to manager node
-      ansible.builtin.copy:
-        src: ../.env
-        dest: "{{ env_file }}"
-        mode: '0644'
-
-    - name: Render docker-stack.yml from template
-      ansible.builtin.template:
-        src: files/docker-stack.yml.j2
-        dest: "{{ stack_file }}"
-        mode: '0644'
-
-    - name: Fail if vars are missing
-      ansible.builtin.fail:
-        msg: "registry_ip='{{ registry_ip | default('') }}', version='{{ version | default('') }}' → Cannot pre-pull images."
-      when: registry_ip | trim | length == 0 or version | trim | length == 0
-    
-    - name: Pre-pull images from registry
-      ansible.builtin.shell: >
-        docker pull {{ registry_ip }}:5000/healthify-backend:{{ version }}
-        && docker pull {{ registry_ip }}:5000/healthify-frontend:{{ version }}
+    - name: Create overlay network if not exists
+      shell: |
+        docker network inspect healthify_net >/dev/null 2>&1 || \
+        docker network create --driver overlay --attachable healthify_net
       args:
         warn: false
-      when:
-        - registry_ip | trim | length > 0
-        - version | trim | length > 0
-      changed_when: false
 
+    - name: Deploy backend service
+      shell: |
+        docker service create \
+          --name healthify_backend \
+          --network healthify_net \
+          --replicas 1 \
+          --env DB_USER=postgres \
+          --env DB_PASSWORD=postgres \
+          --env DB_NAME=healthify \
+          --env PORT=5000 \
+          --publish published=5000,target=5000 \
+          ${registry_ip}/healthify-backend:${version}
+      args:
+        warn: false
 
-
-    - name: Deploy or update Docker stack
-      ansible.builtin.shell: >
-        docker stack deploy --with-registry-auth -c {{ stack_file }} {{ stack_name }}
-      changed_when: false
-
-    - name: Wait for services to start (initial delay)
-      ansible.builtin.pause:
-        seconds: 5
-
-    - name: Check service replicas until healthy
-      ansible.builtin.shell: |
-        docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}' |
-        awk '{split($2,a,"/"); if(a[1]!=a[2]) exit 1}'
-      register: service_status
-      retries: 12
-      delay: 5
-      until: service_status.rc == 0
-      changed_when: false
-
-    - name: Display deployed services
-      ansible.builtin.debug:
-        msg: "{{ service_status.stdout_lines }}"
+    - name: Deploy frontend service
+      shell: |
+        docker service create \
+          --name healthify_frontend \
+          --network healthify_net \
+          --replicas 1 \
+          --env PORT=5173 \
+          --publish published=5173,target=5173 \
+          ${registry_ip}/healthify-frontend:${version}
+      args:
+        warn: false

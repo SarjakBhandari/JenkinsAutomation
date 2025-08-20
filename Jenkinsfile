@@ -21,9 +21,7 @@ pipeline {
 
         stage('Prepare Workspace') {
             steps {
-                echo "🧹 Cleaning workspace"
                 deleteDir()
-                echo "📥 Cloning repository"
                 sh 'git clone https://github.com/SarjakBhandari/JenkinsAutomation'
             }
         }
@@ -32,7 +30,6 @@ pipeline {
             steps {
                 script {
                     def apiBaseUrl = "http://${HOST_IP}:${API_PORT}/api"
-                    echo "⚙️ Injecting environment configs"
                     writeFile file: 'JenkinsAutomation/app/backend/.env', text: """
                     PORT=${API_PORT}
                     DB_HOST=healthify_db
@@ -51,7 +48,6 @@ pipeline {
         stage('Build and Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
-                    echo "🐳 Building and starting staging stack (Docker Compose)"
                     sh '''
                         docker-compose down --remove-orphans --volumes || true
                         docker-compose up -d --build --force-recreate
@@ -64,7 +60,6 @@ pipeline {
             steps {
                 withSonarQubeEnv('SonarQube') {
                     withCredentials([string(credentialsId: 'sonar-token-id', variable: 'SONAR_TOKEN')]) {
-                        echo "🔍 Running SonarQube scan"
                         sh '''
                             /opt/sonar-scanner/bin/sonar-scanner \
                                 -Dsonar.projectKey=healthify \
@@ -79,7 +74,6 @@ pipeline {
 
         stage('Quality Gate') {
             steps {
-                echo "⏳ Waiting for quality gate"
                 timeout(time: 5, unit: 'MINUTES') {
                     waitForQualityGate abortPipeline: true
                 }
@@ -89,11 +83,23 @@ pipeline {
         stage('Preview and Approval') {
             steps {
                 script {
-                    def previewUrl = "http://${HOST_IP}:${FRONTEND_PORT}"
-                    echo "🖥 Preview your app at: ${previewUrl}"
+                    echo "🖥 Preview your app at: http://${HOST_IP}:${FRONTEND_PORT}"
                 }
                 timeout(time: 1, unit: 'DAYS') {
                     input message: '✅ Approve production deployment when ready.'
+                }
+            }
+        }
+
+        stage('Pre-pull Images') {
+            steps {
+                script {
+                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
+                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+                    sh """
+                        docker pull ${frontendImage} || echo "Image not found, will build"
+                        docker pull ${backendImage}  || echo "Image not found, will build"
+                    """
                 }
             }
         }
@@ -103,15 +109,10 @@ pipeline {
                 script {
                     def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
                     def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
-                    echo "📦 Tagging & pushing images to registry ${REGISTRY}"
-
-                    def frontendId = sh(script: "docker inspect -f '{{.Image}}' healthify_frontend", returnStdout: true).trim()
-                    def backendId  = sh(script: "docker inspect -f '{{.Image}}' healthify_backend", returnStdout: true).trim()
-
                     sh """
-                        docker tag ${frontendId} ${frontendImage}
+                        docker tag healthify_frontend ${frontendImage}
                         docker push ${frontendImage}
-                        docker tag ${backendId} ${backendImage}
+                        docker tag healthify_backend ${backendImage}
                         docker push ${backendImage}
                     """
                 }
@@ -124,17 +125,11 @@ pipeline {
                 script {
                     def registryIpOnly = REGISTRY.split(':')[0]
                     dir("${ANSIBLE_DIR}") {
-                        echo "🔗 Ensuring overlay network exists before deploy"
                         sh """
-                            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-                                -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} \
-                                'docker network inspect healthify_net >/dev/null 2>&1 || \
+                            ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
+                                docker network inspect healthify_net >/dev/null 2>&1 || \
                                 docker network create --driver overlay --attachable healthify_net'
                         """
-
-                        echo "🚀 Deploying stack to Docker Swarm"
-                        echo "DEBUG → registry_ip=${registryIpOnly}, version=${VERSION}"
-
                         sh """
                             ansible-playbook playbook.yml \
                                 -u jenkins \
@@ -162,7 +157,6 @@ Backend : http://${SWARM_MANAGER_IP}:5000
             agent { label 'ProductionEnv' }
             steps {
                 dir("${ANSIBLE_DIR}") {
-                    echo "📊 Deploying monitoring stack"
                     sh """
                         ansible-playbook monitoring.yml \
                             -u jenkins \
@@ -188,7 +182,6 @@ Grafana credentials: admin/admin123
         stage('Validate Swarm Health') {
             agent { label 'ProductionEnv' }
             steps {
-                echo "🩺 Checking Swarm node and service health"
                 sh """
                     ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
                         docker node ls &&
@@ -202,7 +195,6 @@ Grafana credentials: admin/admin123
         stage('Check Container Resource Usage') {
             agent { label 'ProductionEnv' }
             steps {
-                echo "📊 Checking container resource usage"
                 sh """
                     ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
                         docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
@@ -214,7 +206,6 @@ Grafana credentials: admin/admin123
         stage('Cleanup Dangling Images') {
             agent { label 'ProductionEnv' }
             steps {
-                echo "🧹 Cleaning up unused Docker images"
                 sh """
                     ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
                         docker image prune -f
