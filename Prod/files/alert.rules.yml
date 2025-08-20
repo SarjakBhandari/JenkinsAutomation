@@ -13,7 +13,7 @@ groups:
         annotations:
           summary: "Backend metrics endpoint is down"
           description: |
-            Prometheus failed to scrape metrics from healthify_backend:5000/metrics
+            Prometheus failed to scrape metrics from healthify_backend:5050/metrics
             for over 2 minutes.
 
       # 🚨 Frontend /health endpoint failing (blackbox)
@@ -31,7 +31,7 @@ groups:
 
       # 🚨 Backend /health endpoint failing (blackbox)
       - alert: BackendHealthFail
-        expr: probe_success{instance="http://healthify_backend:5000/health"} == 0
+        expr: probe_success{instance="http://healthify_backend:5050/health"} == 0
         for: 1m
         labels:
           severity: critical

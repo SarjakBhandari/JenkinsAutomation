@@ -26,13 +26,6 @@
         recurse: yes
       tags: [monitoring]
 
-    - name: Ensure overlay network exists (shared with app stack)
-      ansible.builtin.shell: |
-        docker network inspect {{ overlay_network }} >/dev/null 2>&1 || \
-        docker network create --driver overlay --attachable {{ overlay_network }}
-      changed_when: false
-      tags: [monitoring]
-
     - name: Render monitoring-stack.yml from template
       ansible.builtin.template:
         src: files/monitoring-stack.yml.j2

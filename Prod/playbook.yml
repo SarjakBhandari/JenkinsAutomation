@@ -3,8 +3,8 @@
   hosts: swarm_manager
   become: false
   vars:
-    registry_ip: "192.168.50.4"  
-    version: "latest"              
+    registry_ip: "192.168.50.4"
+    version: "latest"
 
   tasks:
 
@@ -16,6 +16,7 @@
     - name: Ensure node is a Swarm manager
       command: docker info --format="{{ '{{.Swarm.ControlAvailable}}' }}"
       register: is_manager
+      changed_when: false
 
     - name: Fail if not a manager
       fail:
@@ -29,11 +30,16 @@
       args:
         warn: false
       register: overlay_net_result
-      changed_when: overlay_net_result.rc == 0
+      changed_when: "'Created' in overlay_net_result.stdout"
 
-    - name: Deploy backend service
+    - name: Check if backend service exists
+      shell: docker service inspect healthify_backend
+      register: backend_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Deploy backend service if not exists
       shell: |
-        docker service inspect healthify_backend >/dev/null 2>&1 || \
         docker service create \
           --name healthify_backend \
           --network healthify_net \
@@ -44,14 +50,18 @@
           --env PORT=5000 \
           --publish published=5000,target=5000 \
           {{ registry_ip }}/healthify-backend:{{ version }}
-      args:
-        warn: false
+      when: backend_check.rc != 0
       register: backend_result
-      changed_when: backend_result.rc == 0
+      changed_when: true
 
-    - name: Deploy frontend service
+    - name: Check if frontend service exists
+      shell: docker service inspect healthify_frontend
+      register: frontend_check
+      ignore_errors: true
+      changed_when: false
+
+    - name: Deploy frontend service if not exists
       shell: |
-        docker service inspect healthify_frontend >/dev/null 2>&1 || \
         docker service create \
           --name healthify_frontend \
           --network healthify_net \
@@ -59,7 +69,6 @@
           --env PORT=5173 \
           --publish published=5173,target=5173 \
           {{ registry_ip }}/healthify-frontend:{{ version }}
-      args:
-        warn: false
+      when: frontend_check.rc != 0
       register: frontend_result
-      changed_when: frontend_result.rc == 0
+      changed_when: true
