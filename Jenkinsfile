@@ -132,7 +132,7 @@ stage('Tag and Push Images') {
                         sh """
                             pwd
                             ls -l
-                            ansible-galaxy collection install -r requirements.yml || {
+                            ansible-galaxy collection install -r requirements.yml --force || {
                                 echo "❌ Failed to install required Ansible collections"
                                 exit 1
                             }
