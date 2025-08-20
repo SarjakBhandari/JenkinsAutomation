@@ -20,7 +20,7 @@
       ansible.builtin.debug:
         msg: "Overlay network = {{ overlay_network }}"
 
-    -- name: Ensure overlay network exists
+    - name: Ensure overlay network exists
       ansible.builtin.shell: >
         docker network inspect {{ overlay_network }} >/dev/null 2>&1
         || docker network create --driver overlay --attachable {{ overlay_network }}
