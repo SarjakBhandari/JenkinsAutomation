@@ -52,7 +52,6 @@ PORT=${API_PORT}
                 dir('JenkinsAutomation') {
                     echo "Building and deploying fullstack app (staging)"
                     sh '''
-                        docker rm -f healthify_backend healthify_frontend healthify_db 2>/dev/null || true
                         docker-compose down -v || true
                         docker-compose up -d --build
                         docker-compose ps
