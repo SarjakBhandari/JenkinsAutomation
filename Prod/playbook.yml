@@ -11,13 +11,13 @@
     overlay_network: healthify_net
 
   tasks:
-    - name: Create overlay network via CLI fallback
-      ansible.builtin.shell: >
-        docker network inspect {{ overlay_network }} || 
-        docker network create --driver overlay --attachable {{ overlay_network }}
+    - name: Ensure overlay network exists
+      ansible.builtin.shell: |
+        if ! docker network inspect {{ overlay_network }} >/dev/null 2>&1; then
+          docker network create --driver overlay --attachable {{ overlay_network }}
+        fi
       changed_when: false
-
-
+      
     - name: Upload .env file to manager node
       copy:
         src: files/env/.env
