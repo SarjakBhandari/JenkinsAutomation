@@ -133,12 +133,16 @@ stage('Tag and Push Images') {
                             pwd
                             ls -l
                             ansible-galaxy collection install -r requirements.yml || {
-                                echo "❌ Failed to install required Ansible collections" && exit 1
+                                echo "❌ Failed to install required Ansible collections"
+                                exit 1
+                            }
+
                             ansible-playbook playbook.yml \
                                 --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
                                 -u jenkins \
                                 --private-key ${SSH_KEY}
                         """
+
                     }
                 }
             }
