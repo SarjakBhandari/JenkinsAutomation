@@ -2,22 +2,29 @@
 - name: Deploy healthify fullstack app with load balancing (CLI only)
   hosts: swarm_manager
   become: yes
+
+  # Safe defaults — CLI `--extra-vars` still override these
   vars:
     stack_name: healthify
-    registry_ip: "{{ registry_ip | default('192.168.50.4') }}"
-    version: "{{ version | default('latest') }}"
+    registry_ip: 192.168.50.4
+    version: latest
+    overlay_network: healthify_net
     stack_file: "/home/{{ ansible_user }}/docker-stack.yml"
     env_file: "/home/{{ ansible_user }}/.env"
-    overlay_network: healthify_net         # <-- base default set here
-    backend_port: "{{ backend_port | default('5000') }}"
-    frontend_port: "{{ frontend_port | default('5173') }}"
+    backend_port: 5000
+    frontend_port: 5173
 
   tasks:
+
+    - name: Show resolved overlay_network value
+      ansible.builtin.debug:
+        msg: "Overlay network = {{ overlay_network }}"
 
     - name: Ensure overlay network exists
       ansible.builtin.shell: |
         docker network inspect {{ overlay_network }} >/dev/null 2>&1 || \
         docker network create --driver overlay --attachable {{ overlay_network }}
+      when: overlay_network is defined and overlay_network | length > 0
       changed_when: false
 
     - name: Upload .env file to manager node
