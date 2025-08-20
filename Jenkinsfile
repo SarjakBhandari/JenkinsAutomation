@@ -55,7 +55,7 @@ PORT=${API_PORT}
 """
 
                     writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
-                              text: "export const API_BASE_URL = '${apiBaseUrl}';\n"
+                              text: "export const API_BASE_URL = '${apiBaseUrl}:${API_PORT}';\n"
                 }
             }
         }
