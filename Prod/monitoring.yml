@@ -12,7 +12,7 @@
 
   tasks:
     - name: Ensure monitoring directory exists
-      file:
+      ansible.builtin.file:
         path: "{{ monitor_dir }}"
         state: directory
         owner: jenkins
@@ -22,15 +22,15 @@
       tags: [monitoring]
 
     - name: Ensure overlay network exists
-      community.docker.docker_network:
-        name: "{{ overlay_network }}"
-        driver: overlay
-        attachable: true
-        state: present
+      ansible.builtin.shell: |
+        docker network inspect {{ overlay_network }} >/dev/null 2>&1 || \
+        docker network create --driver overlay --attachable {{ overlay_network }}
+      args:
+        warn: false
       tags: [monitoring]
 
     - name: Copy monitoring stack file
-      copy:
+      ansible.builtin.copy:
         src: files/monitoring-stack.yml
         dest: "{{ stack_file }}"
         owner: jenkins
@@ -39,7 +39,7 @@
       tags: [monitoring]
 
     - name: Copy Prometheus config
-      copy:
+      ansible.builtin.copy:
         src: files/prometheus.yml
         dest: "{{ prometheus_config }}"
         owner: jenkins
@@ -48,7 +48,7 @@
       tags: [monitoring]
 
     - name: Copy alert rules
-      copy:
+      ansible.builtin.copy:
         src: files/alert.rules.yml
         dest: "{{ alert_rules }}"
         owner: jenkins
@@ -57,7 +57,7 @@
       tags: [monitoring]
 
     - name: Ensure Grafana data directory exists
-      file:
+      ansible.builtin.file:
         path: "{{ grafana_data_dir }}"
         state: directory
         owner: 472
@@ -66,16 +66,13 @@
       tags: [monitoring]
 
     - name: Check Docker is running
-      community.docker.docker_host_info:
+      ansible.builtin.shell: docker info
       register: docker_info
-      failed_when: docker_info is failed
+      changed_when: false
+      failed_when: docker_info.rc != 0
       tags: [monitoring]
 
     - name: Deploy monitoring stack
-      community.docker.docker_stack:
-        name: monitoring
-        state: present
-        compose:
-          - "{{ stack_file }}"
-        prune: yes
+      ansible.builtin.shell: |
+        docker stack deploy -c {{ stack_file }} monitoring --prune
       tags: [monitoring]

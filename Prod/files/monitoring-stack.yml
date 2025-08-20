@@ -10,6 +10,7 @@ volumes:
   grafana_data:
 
 services:
+
   prometheus:
     image: prom/prometheus:v2.54.1
     command:
@@ -27,13 +28,14 @@ services:
       - /home/jenkins/monitoring/alert.rules.yml:/etc/prometheus/alert.rules.yml:ro
     deploy:
       placement:
-        constraints: [node.role == manager]
+        constraints:
+          - node.role == manager
       restart_policy:
         condition: any
       labels:
-        - "monitoring=true"
+        monitoring: "true"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9090/-/healthy || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -46,13 +48,14 @@ services:
       - healthify_net
     deploy:
       placement:
-        constraints: [node.role == manager]
+        constraints:
+          - node.role == manager
       restart_policy:
         condition: any
       labels:
-        - "monitoring=true"
+        monitoring: "true"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:9115/"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:9115/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -71,13 +74,14 @@ services:
       - grafana_data:/var/lib/grafana
     deploy:
       placement:
-        constraints: [node.role == manager]
+        constraints:
+          - node.role == manager
       restart_policy:
         condition: any
       labels:
-        - "monitoring=true"
+        monitoring: "true"
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 10

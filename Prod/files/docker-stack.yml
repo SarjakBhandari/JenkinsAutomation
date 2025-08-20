@@ -8,6 +8,7 @@ volumes:
   pgdata:
 
 services:
+
   postgres:
     image: postgres:15
     environment:
@@ -19,19 +20,20 @@ services:
     networks:
       - healthify_net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
     deploy:
       placement:
-        constraints: [node.role == manager]
+        constraints:
+          - node.role == manager
       restart_policy:
         condition: any
         delay: 10s
         max_attempts: 5
       labels:
-        - "monitoring=true"
+        monitoring: "true"
 
   backend:
     image: ${REGISTRY}/healthify-backend:${VERSION}
@@ -44,7 +46,7 @@ services:
     depends_on:
       - postgres
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      test: ["CMD-SHELL", "curl -fs http://localhost:5000/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -55,7 +57,7 @@ services:
         delay: 10s
         max_attempts: 5
       labels:
-        - "monitoring=true"
+        monitoring: "true"
 
   frontend:
     image: ${REGISTRY}/healthify-frontend:${VERSION}
@@ -66,7 +68,7 @@ services:
     networks:
       - healthify_net
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5173/health"]
+      test: ["CMD-SHELL", "curl -fs http://localhost:5173/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -77,4 +79,4 @@ services:
         delay: 10s
         max_attempts: 5
       labels:
-        - "monitoring=true"
+        monitoring: "true"
