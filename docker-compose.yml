@@ -45,6 +45,8 @@ services:
     build:
       context: ./app/frontend
       dockerfile: Dockerfile
+      args:
+        API_BASE_URL: http://healthify_backend:5000
     container_name: healthify_frontend
     env_file:
       - .env
