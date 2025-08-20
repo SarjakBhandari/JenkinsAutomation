@@ -1,5 +1,5 @@
 - name: Deploy Healthify stack to Docker Swarm
-  hosts: swarm_managers
+  hosts: swarm_manager
   become: true
   vars:
     overlay_network: healthify_net
