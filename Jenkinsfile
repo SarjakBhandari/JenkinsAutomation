@@ -52,9 +52,7 @@ PORT=${API_PORT}
                 dir('JenkinsAutomation') {
                     echo "Building and deploying fullstack app (staging)"
                     sh '''
-                        docker-compose down -v || true
                         docker-compose up -d --build
-                        docker-compose ps
                     '''
                 }
             }
