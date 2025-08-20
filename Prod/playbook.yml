@@ -7,6 +7,7 @@
     version: "{{ version | default('latest') }}"
     network_name: healthify_net
     stack_file: /home/{{ ansible_user }}/docker-stack.yml
+
   tasks:
     - name: Ensure prerequisites for Docker SDK
       apt:
@@ -24,11 +25,26 @@
       delay: 5
       until: apt_result is succeeded
 
-    - name: Install Docker engine
-      apt:
-        name: docker.io
-        state: present
-        update_cache: yes
+    - name: Unhold and purge broken Docker packages
+      shell: |
+        apt-mark unhold docker.io containerd || true
+        apt-get purge -y docker.io containerd || true
+        apt-get autoremove -y
+      args:
+        warn: false
+
+    - name: Install Docker via official script
+      shell: |
+        curl -fsSL https://get.docker.com -o get-docker.sh
+        sh get-docker.sh
+      args:
+        creates: /usr/bin/docker
+
+    - name: Add jenkins user to docker group
+      user:
+        name: jenkins
+        groups: docker
+        append: yes
 
     - name: Ensure Docker Python SDK is installed
       pip:
