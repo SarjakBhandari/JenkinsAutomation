@@ -14,8 +14,9 @@
       when: registry_ip == "" or version == ""
 
     - name: Ensure node is a Swarm manager
-      shell: docker info --format '{{.Swarm.ControlAvailable}}'
+      shell: docker info --format '{{{{.Swarm.ControlAvailable}}}}'
       register: is_manager
+
 
     - name: Fail if not a manager
       fail:
