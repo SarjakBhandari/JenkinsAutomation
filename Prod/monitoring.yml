@@ -70,11 +70,12 @@
       tags: [monitoring]
 
     - name: Verify Docker daemon is running
-      ansible.builtin.shell: docker info
+      shell: docker info
       register: docker_info
       changed_when: false
       failed_when: docker_info.rc != 0
       tags: [monitoring]
+
 
     - name: Deploy or update monitoring stack
       ansible.builtin.shell: >
