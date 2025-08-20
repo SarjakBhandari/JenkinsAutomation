@@ -12,7 +12,6 @@
     frontend_port: "{{ frontend_port | default('5173') }}"
 
   tasks:
-
     - name: Ensure overlay network exists
       ansible.builtin.shell: |
         docker network inspect healthify_net >/dev/null 2>&1 || \
