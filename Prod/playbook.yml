@@ -11,12 +11,11 @@
     - name: Validate registry_ip and version
       fail:
         msg: "Missing registry_ip or version. Cannot deploy services."
-      when: registry_ip == "" or version == ""
+      when: registry_ip | length == 0 or version | length == 0
 
     - name: Ensure node is a Swarm manager
-      shell: docker info --format '{{{{.Swarm.ControlAvailable}}}}'
+      command: docker info --format="{{ '{{.Swarm.ControlAvailable}}' }}"
       register: is_manager
-
 
     - name: Fail if not a manager
       fail:
