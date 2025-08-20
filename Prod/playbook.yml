@@ -8,14 +8,16 @@
     version: "{{ version | default('latest') }}"
     stack_file: "/home/{{ ansible_user }}/docker-stack.yml"
     env_file: "/home/{{ ansible_user }}/.env"
+    overlay_network: "{{ overlay_network | default('healthify_net') }}"
     backend_port: "{{ backend_port | default('5000') }}"
     frontend_port: "{{ frontend_port | default('5173') }}"
 
   tasks:
+
     - name: Ensure overlay network exists
       ansible.builtin.shell: |
-        docker network inspect healthify_net >/dev/null 2>&1 || \
-        docker network create --driver overlay --attachable healthify_net
+        docker network inspect {{ overlay_network }} >/dev/null 2>&1 || \
+        docker network create --driver overlay --attachable {{ overlay_network }}
       changed_when: false
 
     - name: Upload .env file to manager node
@@ -50,7 +52,7 @@
         docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}' |
         awk '{split($2,a,"/"); if(a[1]!=a[2]) exit 1}'
       register: service_status
-      retries: 12    # 12*5s = ~1min
+      retries: 12
       delay: 5
       until: service_status.rc == 0
       changed_when: false
@@ -58,8 +60,3 @@
     - name: Display deployed services
       ansible.builtin.debug:
         msg: "{{ service_status.stdout_lines }}"
-
-
-    - name: Show service status
-      ansible.builtin.debug:
-        msg: "{{ final_services.stdout_lines }}"
