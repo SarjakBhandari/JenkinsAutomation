@@ -20,12 +20,14 @@
       ansible.builtin.debug:
         msg: "Overlay network = {{ overlay_network }}"
 
-    - name: Ensure overlay network exists
-      ansible.builtin.shell: |
-        docker network inspect {{ overlay_network }} >/dev/null 2>&1 || \
-        docker network create --driver overlay --attachable {{ overlay_network }}
-      when: overlay_network is defined and overlay_network | length > 0
+    -- name: Ensure overlay network exists
+      ansible.builtin.shell: >
+        docker network inspect {{ overlay_network }} >/dev/null 2>&1
+        || docker network create --driver overlay --attachable {{ overlay_network }}
+      args:
+        warn: false
       changed_when: false
+
 
     - name: Upload .env file to manager node
       ansible.builtin.copy:
