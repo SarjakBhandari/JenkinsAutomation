@@ -130,11 +130,6 @@ pipeline {
                     def registryIpOnly = REGISTRY.split(':')[0]
                     dir("${ANSIBLE_DIR}") {
                         sh """
-                            ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
-                                docker network inspect healthify_net >/dev/null 2>&1 || \
-                                docker network create --driver overlay --attachable healthify_net'
-                        """
-                        sh """
                             ansible-playbook playbook.yml \
                                 -u jenkins \
                                 --private-key ${SSH_KEY} \
