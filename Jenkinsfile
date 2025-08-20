@@ -190,10 +190,9 @@ Grafana credentials: admin/admin123
         stage('Archive Artifacts') {
             steps {
                 archiveArtifacts artifacts: '**/Dockerfile, **/*.env, **/config.js, ansible/files/*.yml', fingerprint: true
-            }
-        }
-    }
-            stage('Validate Swarm Health') {
+                    }
+                }
+        stage('Validate Swarm Health') {
             agent { label 'ProductionEnv' }
             steps {
                 echo "Checking Swarm node status and service health"
@@ -235,7 +234,7 @@ Grafana credentials: admin/admin123
                 """
             }
         }
-
+    }
 
     post {
         success {
