@@ -122,31 +122,27 @@ stage('Tag and Push Images') {
 
 
 
-        pipeline {
-            agent any
-            stages {
-                stage('Install Ansible Collections') {
-                steps {
-                    sh '''
-                    ansible-galaxy collection install -r requirements.yml || {
-                        echo "❌ Failed to install required Ansible collections" && exit 1
-                    }
-                    '''
+        stage('Install Ansible Collections') {
+            steps {
+                sh '''
+                ansible-galaxy collection install -r requirements.yml || {
+                    echo "❌ Failed to install required Ansible collections" && exit 1
                 }
-                }
+                '''
+            }
+        }
 
-                stage('Run Playbook') {
-                steps {
-                    sh '''
-                    ansible-playbook playbook.yml \
-                        --extra-vars "registry_ip=192.168.50.4 version=174" \
-                        -u jenkins \
-                        --private-key /home/jenkins/.ssh/id_rsa
-                    '''
-                }
-                }
+        stage('Run Playbook') {
+            steps {
+                sh '''
+                ansible-playbook playbook.yml \
+                    --extra-vars "registry_ip=192.168.50.4 version=${VERSION}" \
+                    -u jenkins \
+                    --private-key ${SSH_KEY}
+                '''
             }
-            }
+        }
+
 
 
         stage('Confirm Ansible Deployment') {
