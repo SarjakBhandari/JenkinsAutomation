@@ -27,19 +27,6 @@ pipeline {
             }
         }
 
-        stage('Start DB Container') {
-            steps {
-                dir('JenkinsAutomation') {
-                    echo "Starting PostgreSQL (clean slate)"
-                    sh '''
-                        docker rm -f healthify_backend healthify_frontend healthify_db 2>/dev/null || true
-                        docker-compose down -v || true
-                        docker-compose up -d postgres
-                    '''
-                }
-            }
-        }
-
         stage('Inject Environment Variables') {
             steps {
                 script {
@@ -54,9 +41,9 @@ DB_NAME=${DB_NAME}
 PORT=${API_PORT}
 """
 
-writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
-          text: "export const API_BASE_URL = '${apiBaseUrl}';\n"
-
+                    writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
+                              text: "export const API_BASE_URL = '${apiBaseUrl}';\n"
+                }
             }
         }
 
@@ -65,7 +52,7 @@ writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
                 dir('JenkinsAutomation') {
                     echo "Building and deploying fullstack app (staging)"
                     sh '''
-                        docker rm -f healthify_backend healthify_frontend 2>/dev/null || true
+                        docker rm -f healthify_backend healthify_frontend healthify_db 2>/dev/null || true
                         docker-compose down -v || true
                         docker-compose up -d --build
                         docker-compose ps
@@ -114,16 +101,13 @@ writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
         stage('Push to Local Registry') {
             steps {
                 script {
-                    def feImageId = sh(script: "docker inspect -f '{{.Image}}' healthify_frontend", returnStdout: true).trim()
-                    def beImageId = sh(script: "docker inspect -f '{{.Image}}' healthify_backend", returnStdout: true).trim()
-
                     def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
                     def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
 
                     sh """
-                        docker tag ${feImageId} ${frontendImage}
+                        docker tag healthify_frontend ${frontendImage}
                         docker push ${frontendImage}
-                        docker tag ${beImageId} ${backendImage}
+                        docker tag healthify_backend ${backendImage}
                         docker push ${backendImage}
                     """
                 }
@@ -136,10 +120,8 @@ writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
                 script {
                     def registryIpOnly = REGISTRY.split(':')[0]
                     dir("${ANSIBLE_DIR}") {
+                        echo "Running Ansible playbook for Swarm deployment"
                         sh """
-                        pwd
-                        ls -al
-
                             ansible-playbook playbook.yml \
                                 --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
                                 -u jenkins \
