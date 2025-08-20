@@ -109,12 +109,14 @@
   become: yes
   tasks:
     - name: Wait for manager facts to be available
+      when: groups['swarm_manager'] is defined and groups['swarm_manager'] | length > 0
       wait_for:
-        host: "{{ groups['swarm_manager'][0] }}"
+        host: "{{ hostvars[groups['swarm_manager'][0]].ansible_host | default(groups['swarm_manager'][0]) }}"
         port: 2377
         delay: 5
         timeout: 60
       delegate_to: localhost
+
 
     - name: Join worker to Swarm
       community.docker.docker_swarm:
