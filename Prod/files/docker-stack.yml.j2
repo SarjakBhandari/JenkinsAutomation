@@ -40,13 +40,13 @@ services:
     env_file:
       - {{ env_file }}
     ports:
-      - "{{ backend_port | default('5000') }}:5000"
+      - "{{ backend_port | default('5050') }}:5000"
     networks:
       - {{ overlay_network }}
     depends_on:
       - postgres
     healthcheck:
-      test: ["CMD-SHELL", "curl -fs http://localhost:5000/health || exit 1"]
+      test: ["CMD-SHELL", "curl -fs http://localhost:5050/health || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 5
