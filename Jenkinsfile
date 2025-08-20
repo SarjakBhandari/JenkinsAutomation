@@ -92,25 +92,23 @@ pipeline {
         }
 
         stage('Tag and Push Images') {
-            steps {
-                script {
-                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
-                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+    steps {
+        script {
+            def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
+            def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
 
-                    def frontendId = sh(script: "docker inspect -f '{{.Image}}' $(docker ps -qf name=healthify_frontend)", returnStdout: true).trim()
-                    def backendId  = sh(script: "docker inspect -f '{{.Image}}' $(docker ps -qf name=healthify_backend)", returnStdout: true).trim()
-
-                    sh """
-                        docker tag ${frontendId} ${frontendImage}
-                        docker push ${frontendImage}
-                        docker tag ${backendId} ${backendImage}
-                        docker push ${backendImage}
-                    """
-                }
-            }
+            sh '''
+                docker tag $(docker inspect -f '{{.Image}}' $(docker ps -qf name=healthify_frontend)) ''' + frontendImage + '''
+                docker tag $(docker inspect -f '{{.Image}}' $(docker ps -qf name=healthify_backend)) ''' + backendImage + '''
+                docker push ''' + frontendImage + '''
+                docker push ''' + backendImage + '''
+            '''
         }
+    }
+}
 
-        stage('Pre-pull Images on Jenkins') {
+
+        stage('Pre-pull Images on ProductionEnv') {
             agent { label 'ProductionEnv' }
             steps {
                 script {
