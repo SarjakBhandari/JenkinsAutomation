@@ -91,19 +91,7 @@ pipeline {
             }
         }
 
-        stage('Pre-pull Images') {
-            steps {
-                script {
-                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
-                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
-                    sh """
-                        docker pull ${frontendImage} || echo "Image not found, will build"
-                        docker pull ${backendImage}  || echo "Image not found, will build"
-                    """
-                }
-            }
-        }
-
+       
         stage('Tag and Push Images') {
             steps {
                 script {
@@ -152,6 +140,21 @@ Backend : http://${SWARM_MANAGER_IP}:5000
 """
             }
         }
+
+         stage('Pre-pull Images') {
+            agent { label 'ProductionEnv' }
+            steps {
+                script {
+                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
+                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+                    sh """
+                        docker pull ${frontendImage} || echo "Image not found, will build"
+                        docker pull ${backendImage}  || echo "Image not found, will build"
+                    """
+                }
+            }
+        }
+
 
         stage('Deploy Monitoring via Ansible') {
             agent { label 'ProductionEnv' }
