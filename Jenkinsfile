@@ -140,7 +140,8 @@ ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
                     ansible-playbook playbook.yml \
                         -u jenkins \
                         --private-key ${SSH_KEY} \
-                        --extra-vars "registry_ip=${registryIpOnly} version=${VERSION} backend_host=${backendHost}"
+                        --extra-vars "registry_ip=${registryIpOnly} version=${VERSION} backend_host=${HOST_IP}"
+"
                 """
             }
         }
