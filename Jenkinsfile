@@ -119,39 +119,32 @@ pipeline {
         }
 
         stage('Deploy to Swarm via Ansible') {
-    agent { label 'ProductionEnv' }
-    steps {
-        script {
-            def registryIpOnly = REGISTRY.split(':')[0]
-            dir("${ANSIBLE_DIR}") {
-                echo "🔗 Ensuring overlay network exists before deploy"
-                sh """
-                    ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-                        -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} \
-                        'docker network inspect healthify_net >/dev/null 2>&1 || \
-                        docker network create --driver overlay --attachable healthify_net'
-                """
+            agent { label 'ProductionEnv' }
+            steps {
+                script {
+                    def registryIpOnly = REGISTRY.split(':')[0]
+                    dir("${ANSIBLE_DIR}") {
+                        echo "🔗 Ensuring overlay network exists before deploy"
+                        sh """
+                            ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+                                -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} \
+                                'docker network inspect healthify_net >/dev/null 2>&1 || \
+                                docker network create --driver overlay --attachable healthify_net'
+                        """
 
-                echo "🚀 Deploying stack to Docker Swarm"
-                echo "DEBUG → registry_ip=${registryIpOnly}, version=${VERSION}"
+                        echo "🚀 Deploying stack to Docker Swarm"
+                        echo "DEBUG → registry_ip=${registryIpOnly}, version=${VERSION}"
 
-                sh """
-                    ansible-playbook playbook.yml \
-                        -u jenkins \
-                        --private-key ${SSH_KEY} \
-                        --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}"
-                """
+                        sh """
+                            ansible-playbook playbook.yml \
+                                -u jenkins \
+                                --private-key ${SSH_KEY} \
+                                --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}"
+                        """
+                    }
+                }
             }
         }
-    }
-}
-
-stage('Deploy Monitoring via Ansible') {
-    agent { label 'ProductionEnv' }
-    steps {
-        script
-
-
 
         stage('Confirm Ansible Deployment') {
             steps {
@@ -163,22 +156,18 @@ Backend : http://${SWARM_MANAGER_IP}:5000
 ========================================================
 """
             }
-        }}
+        }
 
         stage('Deploy Monitoring via Ansible') {
             agent { label 'ProductionEnv' }
             steps {
                 dir("${ANSIBLE_DIR}") {
-                    def registryIpOnly = REGISTRY.split(':')[0]
-echo "DEBUG → registry_ip=${registryIpOnly}, version=${VERSION}"
-
-sh """
-  ansible-playbook playbook.yml \
-    -u jenkins \
-    --private-key ${SSH_KEY} \
-    --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}"
-"""
-
+                    echo "📊 Deploying monitoring stack"
+                    sh """
+                        ansible-playbook monitoring.yml \
+                            -u jenkins \
+                            --private-key ${SSH_KEY}
+                    """
                 }
             }
         }
@@ -252,5 +241,4 @@ ${BUILD_URL}"""
                  body: "Build #${BUILD_NUMBER} failed. Check logs: ${BUILD_URL}"
         }
     }
-}
 }
