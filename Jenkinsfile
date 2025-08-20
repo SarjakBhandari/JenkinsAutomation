@@ -33,13 +33,16 @@ pipeline {
                     def apiBaseUrl = "http://${HOST_IP}:${API_PORT}/api"
                     echo "Setting DB_HOST=healthify_db and API_BASE_URL=${apiBaseUrl}"
 
-                    writeFile file: 'JenkinsAutomation/app/backend/.env', text: """
+writeFile file: 'JenkinsAutomation/app/backend/.env', text: """
+PORT=${API_PORT}
 DB_HOST=healthify_db
 DB_USER=${DB_USER}
 DB_PASSWORD=${DB_PASSWORD}
 DB_NAME=${DB_NAME}
-PORT=${API_PORT}
+JWT_SECRET=healthify
+EXPIRES_IN=24h
 """
+
 
                     writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
                               text: "export const API_BASE_URL = '${apiBaseUrl}';\n"
