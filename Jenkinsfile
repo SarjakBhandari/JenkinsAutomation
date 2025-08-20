@@ -11,7 +11,7 @@ pipeline {
         REGISTRY           = "192.168.50.4:5000"
         VERSION            = "${BUILD_NUMBER}"
         SONAR_SCANNER_OPTS = "-Xmx1024m"
-        SWARM_MANAGER_IP   = "192.168.50.5"
+        SWARM_MANAGER_IP   = "192.168.50.4"
         ANSIBLE_DIR        = "Prod"
         SSH_KEY            = "~/.ssh/id_rsa"
         HOST_IP            = "192.168.50.3"
@@ -131,7 +131,7 @@ pipeline {
                     dir("${ANSIBLE_DIR}") {
                         sh """
 ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-    -i /home/jenkins/.ssh/id_rsa jenkins@192.168.50.5 \
+    -i /home/jenkins/.ssh/id_rsa jenkins@192.168.50.4 \
     'docker network inspect healthify_net >/dev/null 2>&1 || \
      docker network create --driver overlay --attachable healthify_net'
 
