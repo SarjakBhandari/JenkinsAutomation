@@ -1,7 +1,7 @@
 version: '3.2'
 
 networks:
-  healthify_net:
+  {{ overlay_network }}:
     external: true
 
 volumes:
@@ -18,7 +18,7 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
     networks:
-      - healthify_net
+      - {{ overlay_network }}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres || exit 1"]
       interval: 30s
@@ -36,13 +36,13 @@ services:
         monitoring: "true"
 
   backend:
-    image: ${REGISTRY}/healthify-backend:${VERSION}
+    image: {{ registry_ip }}:5000/healthify-backend:{{ version }}
     env_file:
-      - .env
+      - {{ env_file }}
     ports:
-      - "${BACKEND_PORT:-5000}:5000"
+      - "{{ backend_port | default('5000') }}:5000"
     networks:
-      - healthify_net
+      - {{ overlay_network }}
     depends_on:
       - postgres
     healthcheck:
@@ -60,13 +60,13 @@ services:
         monitoring: "true"
 
   frontend:
-    image: ${REGISTRY}/healthify-frontend:${VERSION}
+    image: {{ registry_ip }}:5000/healthify-frontend:{{ version }}
     env_file:
-      - .env
+      - {{ env_file }}
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
+      - "{{ frontend_port | default('5173') }}:5173"
     networks:
-      - healthify_net
+      - {{ overlay_network }}
     healthcheck:
       test: ["CMD-SHELL", "curl -fs http://localhost:5173/health || exit 1"]
       interval: 30s

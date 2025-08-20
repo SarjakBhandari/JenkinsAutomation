@@ -3,12 +3,14 @@
   hosts: swarm_manager
   become: yes
   vars:
-    stack_name: "{{ stack_name | default('healthify') }}"
+    stack_name: healthify
     registry_ip: "{{ registry_ip | default('192.168.50.4') }}"
     version: "{{ version | default('latest') }}"
     stack_file: "/home/{{ ansible_user }}/docker-stack.yml"
     env_file: "/home/{{ ansible_user }}/.env"
     overlay_network: "{{ overlay_network | default('healthify_net') }}"
+    backend_port: "{{ backend_port | default('5000') }}"
+    frontend_port: "{{ frontend_port | default('5173') }}"
 
   tasks:
 
@@ -30,13 +32,9 @@
         dest: "{{ stack_file }}"
         mode: '0644'
 
-    - name: Pull backend image from registry
+    - name: Pre-pull images from registry
       ansible.builtin.shell: >
-        docker pull {{ registry_ip }}:5000/healthify-backend:{{ version }}
-      changed_when: false
-
-    - name: Pull frontend image from registry
-      ansible.builtin.shell: >
+        docker pull {{ registry_ip }}:5000/healthify-backend:{{ version }} &&
         docker pull {{ registry_ip }}:5000/healthify-frontend:{{ version }}
       changed_when: false
 
@@ -49,16 +47,22 @@
       ansible.builtin.pause:
         seconds: 5
 
-    - name: Check service replica counts until healthy
+    - name: Check service replicas until healthy
       ansible.builtin.shell: |
-        docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}' \
-        | grep -E '([0-9]+)/\1'
+        docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}' |
+        awk '{split($2,a,"/"); if(a[1]!=a[2]) exit 1}'
       register: service_status
-      retries: 12            
+      retries: 12    # 12*5s = ~1min
       delay: 5
       until: service_status.rc == 0
       changed_when: false
 
     - name: Display deployed services
+      ansible.builtin.shell: >
+        docker service ls --filter name={{ stack_name }}
+      register: final_services
+      changed_when: false
+
+    - name: Show service status
       ansible.builtin.debug:
-        msg: "{{ service_status.stdout_lines }}"
+        msg: "{{ final_services.stdout_lines }}"

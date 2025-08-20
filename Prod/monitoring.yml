@@ -3,14 +3,19 @@
   hosts: swarm_manager
   become: yes
   vars:
+    stack_name: monitoring
     monitor_dir: /home/jenkins/monitoring
     stack_file: "{{ monitor_dir }}/monitoring-stack.yml"
     prometheus_config: "{{ monitor_dir }}/prometheus.yml"
     alert_rules: "{{ monitor_dir }}/alert.rules.yml"
     grafana_data_dir: /var/lib/grafana
-    overlay_network: monitoring_net
+    overlay_network: "{{ overlay_network | default('healthify_net') }}"
+    prometheus_version: "{{ prometheus_version | default('v2.54.1') }}"
+    blackbox_version: "{{ blackbox_version | default('v0.25.0') }}"
+    grafana_version: "{{ grafana_version | default('10.4.6') }}"
 
   tasks:
+
     - name: Ensure monitoring directory exists
       ansible.builtin.file:
         path: "{{ monitor_dir }}"
@@ -21,24 +26,23 @@
         recurse: yes
       tags: [monitoring]
 
-    - name: Ensure overlay network exists
+    - name: Ensure overlay network exists (shared with app stack)
       ansible.builtin.shell: |
         docker network inspect {{ overlay_network }} >/dev/null 2>&1 || \
         docker network create --driver overlay --attachable {{ overlay_network }}
-      args:
-        warn: false
+      changed_when: false
       tags: [monitoring]
 
-    - name: Copy monitoring stack file
-      ansible.builtin.copy:
-        src: files/monitoring-stack.yml
+    - name: Render monitoring-stack.yml from template
+      ansible.builtin.template:
+        src: files/monitoring-stack.yml.j2
         dest: "{{ stack_file }}"
         owner: jenkins
         group: jenkins
         mode: '0644'
       tags: [monitoring]
 
-    - name: Copy Prometheus config
+    - name: Upload Prometheus config
       ansible.builtin.copy:
         src: files/prometheus.yml
         dest: "{{ prometheus_config }}"
@@ -47,7 +51,7 @@
         mode: '0644'
       tags: [monitoring]
 
-    - name: Copy alert rules
+    - name: Upload alert rules
       ansible.builtin.copy:
         src: files/alert.rules.yml
         dest: "{{ alert_rules }}"
@@ -65,14 +69,36 @@
         mode: '0755'
       tags: [monitoring]
 
-    - name: Check Docker is running
+    - name: Verify Docker daemon is running
       ansible.builtin.shell: docker info
       register: docker_info
       changed_when: false
       failed_when: docker_info.rc != 0
       tags: [monitoring]
 
-    - name: Deploy monitoring stack
+    - name: Deploy or update monitoring stack
+      ansible.builtin.shell: >
+        docker stack deploy --with-registry-auth -c {{ stack_file }} {{ stack_name }} --prune
+      changed_when: false
+      tags: [monitoring]
+
+    - name: Wait for monitoring services to start
+      ansible.builtin.pause:
+        seconds: 5
+      tags: [monitoring]
+
+    - name: Check monitoring services until healthy
       ansible.builtin.shell: |
-        docker stack deploy -c {{ stack_file }} monitoring --prune
+        docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}' |
+        awk '{split($2,a,"/"); if(a[1]!=a[2]) exit 1}'
+      register: monitor_status
+      retries: 12    # 12*5s = ~1 min
+      delay: 5
+      until: monitor_status.rc == 0
+      changed_when: false
+      tags: [monitoring]
+
+    - name: Show final monitoring service status
+      ansible.builtin.debug:
+        msg: "{{ monitor_status.stdout_lines }}"
       tags: [monitoring]
