@@ -3,19 +3,19 @@
   hosts: swarm_manager
   become: yes
   vars:
-    stack_name: healthify
+    stack_name: "{{ stack_name | default('healthify') }}"
     registry_ip: "{{ registry_ip | default('192.168.50.4') }}"
     version: "{{ version | default('latest') }}"
     stack_file: "/home/{{ ansible_user }}/docker-stack.yml"
     env_file: "/home/{{ ansible_user }}/.env"
-    overlay_network: healthify_net
+    overlay_network: "{{ overlay_network | default('healthify_net') }}"
 
   tasks:
-    - name: Ensure overlay network exists
+
+    - name: Ensure overlay network exists (idempotent CLI)
       ansible.builtin.shell: |
-        if ! docker network inspect {{ overlay_network }} >/dev/null 2>&1; then
-          docker network create --driver overlay --attachable {{ overlay_network }}
-        fi
+        docker network inspect {{ overlay_network }} >/dev/null 2>&1 || \
+        docker network create --driver overlay --attachable {{ overlay_network }}
       changed_when: false
 
     - name: Upload .env file to manager node
@@ -45,11 +45,18 @@
         docker stack deploy --with-registry-auth -c {{ stack_file }} {{ stack_name }}
       changed_when: false
 
-    - name: Wait for services to stabilize
+    - name: Wait for services to start (initial delay)
+      ansible.builtin.pause:
+        seconds: 5
+
+    - name: Check service replica counts until healthy
       ansible.builtin.shell: |
-        sleep 5
-        docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}'
+        docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}' \
+        | grep -E '([0-9]+)/\1'
       register: service_status
+      retries: 12            
+      delay: 5
+      until: service_status.rc == 0
       changed_when: false
 
     - name: Display deployed services
