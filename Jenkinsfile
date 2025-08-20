@@ -123,6 +123,7 @@ stage('Tag and Push Images') {
 
 
         stage('Install Ansible Collections') {
+            agent { label 'ProductionEnv' }
             steps {
                 sh '''
                 ansible-galaxy collection install -r requirements.yml || {
@@ -133,6 +134,7 @@ stage('Tag and Push Images') {
         }
 
         stage('Run Playbook') {
+            agent { label 'ProductionEnv' }
             steps {
                 sh '''
                 ansible-playbook playbook.yml \
