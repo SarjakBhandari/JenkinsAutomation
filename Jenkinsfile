@@ -163,7 +163,7 @@ Backend : http://${SWARM_MANAGER_IP}:5000
 ========================================================
 """
             }
-        }
+        }}
 
         stage('Deploy Monitoring via Ansible') {
             agent { label 'ProductionEnv' }
