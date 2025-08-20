@@ -34,9 +34,17 @@
 
     - name: Pre-pull images from registry
       ansible.builtin.shell: >
-        docker pull {{ registry_ip }}:5000/healthify-backend:{{ version }} &&
-        docker pull {{ registry_ip }}:5000/healthify-frontend:{{ version }}
+        docker pull {{ registry_ip }}:5000/healthify-backend:{{ version }}
+        && docker pull {{ registry_ip }}:5000/healthify-frontend:{{ version }}
+      args:
+        warn: false
+      when:
+        - registry_ip is defined
+        - version is defined
+        - registry_ip | trim | length > 0
+        - version | trim | length > 0
       changed_when: false
+
 
     - name: Deploy or update Docker stack
       ansible.builtin.shell: >
