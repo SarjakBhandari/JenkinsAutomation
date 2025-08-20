@@ -6,7 +6,7 @@ pipeline {
         DB_USER            = 'postgres'
         DB_PASSWORD        = 'postgres'
         DB_NAME            = 'healthify'
-        API_PORT           = '5000'
+        API_PORT           = '5050'
         FRONTEND_PORT      = '5173'
         REGISTRY           = "192.168.50.4:5000"
         VERSION            = "${BUILD_NUMBER}"
@@ -153,7 +153,7 @@ ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
 ========================================================
 ✅ ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
 Frontend: http://${SWARM_MANAGER_IP}:5173
-Backend : http://${SWARM_MANAGER_IP}:5000
+Backend : http://${SWARM_MANAGER_IP}:5050
 ========================================================
 """
             }
