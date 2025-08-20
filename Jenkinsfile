@@ -137,6 +137,9 @@ PORT=${API_PORT}
                     def registryIpOnly = REGISTRY.split(':')[0]
                     dir("${ANSIBLE_DIR}") {
                         sh """
+                        pwd
+                        ls -al
+
                             ansible-playbook playbook.yml \
                                 --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
                                 -u jenkins \
