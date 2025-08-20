@@ -29,7 +29,7 @@ pipeline {
         stage('Inject Environment Variables') {
             steps {
                 script {
-                    def apiBaseUrl = "http://${HOST_IP}:${API_PORT}/api"
+                    def apiBaseUrl = "http://${HOST_IP}:${API_PORT}/api/"
                     writeFile file: 'JenkinsAutomation/app/backend/.env', text: """
                     PORT=${API_PORT}
                     DB_HOST=healthify_db
