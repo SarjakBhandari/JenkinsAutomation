@@ -3,7 +3,7 @@
   become: true
   vars:
     overlay_network: healthify_net
-    registry_ip: 192.168.1.100
+    registry_ip: 192.168.50.4
     version: "v1.2.3"
     env_file: "/opt/healthify/.env"
     backend_port: "5050"
