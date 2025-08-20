@@ -58,10 +58,9 @@
       changed_when: false
 
     - name: Display deployed services
-      ansible.builtin.shell: >
-        docker service ls --filter name={{ stack_name }}
-      register: final_services
-      changed_when: false
+      ansible.builtin.debug:
+        msg: "{{ service_status.stdout_lines }}"
+
 
     - name: Show service status
       ansible.builtin.debug:
