@@ -130,6 +130,13 @@ pipeline {
                     def registryIpOnly = REGISTRY.split(':')[0]
                     dir("${ANSIBLE_DIR}") {
                         sh """
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+    -i /home/jenkins/.ssh/id_rsa jenkins@192.168.50.5 \
+    'docker network inspect healthify_net >/dev/null 2>&1 || \
+     docker network create --driver overlay --attachable healthify_net'
+
+                        """
+                        sh """
                             ansible-playbook playbook.yml \
                                 -u jenkins \
                                 --private-key ${SSH_KEY} \
