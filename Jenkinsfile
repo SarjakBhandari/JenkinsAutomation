@@ -193,6 +193,49 @@ Grafana credentials: admin/admin123
             }
         }
     }
+            stage('Validate Swarm Health') {
+            agent { label 'ProductionEnv' }
+            steps {
+                echo "Checking Swarm node status and service health"
+                sh """
+                    ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
+                        echo "🔍 Docker Node Status:"
+                        docker node ls
+
+                        echo "🔍 Service Status:"
+                        docker service ls
+
+                        echo "🔍 Unhealthy Containers:"
+                        docker ps --filter "health=unhealthy"
+                    '
+                """
+            }
+        }
+
+        stage('Check Container Resource Usage') {
+            agent { label 'ProductionEnv' }
+            steps {
+                echo "Checking container CPU and memory usage"
+                sh """
+                    ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
+                        docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+                    '
+                """
+            }
+        }
+
+        stage('Cleanup Dangling Images') {
+            agent { label 'ProductionEnv' }
+            steps {
+                echo "Cleaning up unused Docker images"
+                sh """
+                    ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
+                        docker image prune -f
+                    '
+                """
+            }
+        }
+
 
     post {
         success {
