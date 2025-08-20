@@ -130,6 +130,8 @@ stage('Tag and Push Images') {
                     dir("${ANSIBLE_DIR}") {
                         echo "Running Ansible playbook for Swarm deployment"
                         sh """
+                            pwd
+                            ls -l
                             ansible-playbook playbook.yml \
                                 --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
                                 -u jenkins \
