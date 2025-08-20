@@ -40,7 +40,7 @@ services:
     env_file:
       - {{ env_file }}
     ports:
-      - "{{ backend_port | default('5050') }}:5000"
+      - "{{ backend_port | default('5050') }}:5050"
     networks:
       - {{ overlay_network }}
     depends_on:
@@ -60,6 +60,8 @@ services:
         monitoring: "true"
 
   frontend:
+  args:
+    API_BASE_URL: "http://${HOST_IP}:${API_PORT}"
     image: {{ registry_ip }}:5000/healthify-frontend:{{ version }}
     env_file:
       - {{ env_file }}

@@ -42,6 +42,8 @@ services:
       retries: 5
 
   frontend:
+    args:
+      API_BASE_URL: "http://${HOST_IP}:${API_PORT}"
     build:
       context: ./app/frontend
       dockerfile: Dockerfile
