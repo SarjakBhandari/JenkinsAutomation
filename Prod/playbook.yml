@@ -1,12 +1,26 @@
 ---
 - name: Deploy Healthify Stack to Docker Swarm
-  hosts: all
+  hosts: swarm_manager
   become: false
   vars:
-    registry_ip: ""
-    version: ""
+    registry_ip: "192.168.50.4"  
+    version: "v2"              
 
   tasks:
+
+    - name: Validate registry_ip and version
+      fail:
+        msg: "Missing registry_ip or version. Cannot deploy services."
+      when: registry_ip == "" or version == ""
+
+    - name: Ensure node is a Swarm manager
+      shell: docker info --format '{{.Swarm.ControlAvailable}}'
+      register: is_manager
+
+    - name: Fail if not a manager
+      fail:
+        msg: "This node is not a Swarm manager. Cannot create overlay network or deploy services."
+      when: is_manager.stdout != "true"
 
     - name: Create overlay network if not exists
       shell: |
@@ -14,9 +28,12 @@
         docker network create --driver overlay --attachable healthify_net
       args:
         warn: false
+      register: overlay_net_result
+      changed_when: overlay_net_result.rc == 0
 
     - name: Deploy backend service
       shell: |
+        docker service inspect healthify_backend >/dev/null 2>&1 || \
         docker service create \
           --name healthify_backend \
           --network healthify_net \
@@ -26,18 +43,23 @@
           --env DB_NAME=healthify \
           --env PORT=5000 \
           --publish published=5000,target=5000 \
-          ${registry_ip}/healthify-backend:${version}
+          {{ registry_ip }}/healthify-backend:{{ version }}
       args:
         warn: false
+      register: backend_result
+      changed_when: backend_result.rc == 0
 
     - name: Deploy frontend service
       shell: |
+        docker service inspect healthify_frontend >/dev/null 2>&1 || \
         docker service create \
           --name healthify_frontend \
           --network healthify_net \
           --replicas 1 \
           --env PORT=5173 \
           --publish published=5173,target=5173 \
-          ${registry_ip}/healthify-frontend:${version}
+          {{ registry_ip }}/healthify-frontend:{{ version }}
       args:
         warn: false
+      register: frontend_result
+      changed_when: frontend_result.rc == 0
