@@ -124,10 +124,17 @@ pipeline {
                 script {
                     def registryIpOnly = REGISTRY.split(':')[0]
                     dir("${ANSIBLE_DIR}") {
+                        echo "🔗 Ensuring overlay network exists before deploy"
+                        sh """
+                            ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
+                                docker network inspect healthify_net >/dev/null 2>&1 || \
+                                docker network create --driver overlay --attachable healthify_net
+                            '
+                        """
                         echo "🚀 Deploying stack to Docker Swarm"
                         sh """
                             ansible-playbook playbook.yml \
-                                --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}" \
+                                --extra-vars "registry_ip=${registryIpOnly} version=${VERSION} overlay_network=healthify_net" \
                                 -u jenkins \
                                 --private-key ${SSH_KEY}
                         """
@@ -135,6 +142,7 @@ pipeline {
                 }
             }
         }
+
 
         stage('Confirm Ansible Deployment') {
             steps {

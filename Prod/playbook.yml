@@ -8,6 +8,7 @@
     version: "{{ version | default('latest') }}"
     stack_file: "/home/{{ ansible_user }}/docker-stack.yml"
     env_file: "/home/{{ ansible_user }}/.env"
+    overlay_network: healthify_net         # <-- base default set here
     backend_port: "{{ backend_port | default('5000') }}"
     frontend_port: "{{ frontend_port | default('5173') }}"
 
@@ -15,9 +16,9 @@
 
     - name: Ensure overlay network exists
       ansible.builtin.shell: |
-        docker network inspect {{ overlay_network | default('healthify_net') }} >/dev/null 2>&1 || \
-        docker network create --driver overlay --attachable {{ overlay_network | default('healthify_net') }}
-
+        docker network inspect {{ overlay_network }} >/dev/null 2>&1 || \
+        docker network create --driver overlay --attachable {{ overlay_network }}
+      changed_when: false
 
     - name: Upload .env file to manager node
       ansible.builtin.copy:
