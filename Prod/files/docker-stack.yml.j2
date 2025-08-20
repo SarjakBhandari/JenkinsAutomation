@@ -60,11 +60,11 @@ services:
         monitoring: "true"
 
   frontend:
-  args:
-    API_BASE_URL: "http://${HOST_IP}:${API_PORT}"
     image: {{ registry_ip }}:5000/healthify-frontend:{{ version }}
     env_file:
       - {{ env_file }}
+    environment:
+      API_BASE_URL: "http://192.168.50.4:{{ backend_port | default('5050') }}"
     ports:
       - "{{ frontend_port | default('5173') }}:5173"
     networks:

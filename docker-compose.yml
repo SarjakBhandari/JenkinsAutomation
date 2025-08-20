@@ -42,13 +42,11 @@ services:
       retries: 5
 
   frontend:
-    args:
-      API_BASE_URL: "http://${HOST_IP}:${API_PORT}"
     build:
       context: ./app/frontend
       dockerfile: Dockerfile
       args:
-        API_BASE_URL: http://healthify_backend:5050
+        API_BASE_URL: "http://${HOST_IP}:${API_PORT}"
     container_name: healthify_frontend
     env_file:
       - .env
