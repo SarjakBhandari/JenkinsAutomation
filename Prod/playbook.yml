@@ -1,5 +1,5 @@
 ---
-- name: Deploy fullstack stack
+- name: Deploy healthify fullstack app with load balancing
   hosts: swarm_manager
   become: yes
   vars:
@@ -12,11 +12,11 @@
 
   tasks:
     - name: Ensure overlay network exists
-      community.docker.docker_network:
-        name: "{{ overlay_network }}"
-        driver: overlay
-        attachable: true
-        state: present
+      ansible.builtin.command: >
+        docker network create --driver overlay --attachable {{ overlay_network }}
+      args:
+        creates: "/var/lib/docker/network/files/{{ overlay_network }}"
+      ignore_errors: true
 
     - name: Upload .env file to manager node
       copy:
@@ -42,10 +42,20 @@
         tag: "{{ version }}"
         source: pull
 
-    - name: Deploy or update the Docker stack
+    - name: Deploy Docker stack with replicated services
       community.docker.docker_stack:
         name: "{{ stack_name }}"
         state: present
         compose:
           - "{{ stack_file }}"
         prune: yes
+
+    - name: Wait for services to stabilize
+      shell: |
+        docker service ls --filter name={{ stack_name }} --format '{{ "{{.Name}}" }} {{ "{{.Replicas}}" }}'
+      register: service_status
+      changed_when: false
+
+    - name: Display deployed services
+      debug:
+        msg: "{{ service_status.stdout_lines }}"
