@@ -22,7 +22,7 @@
 
     - name: Upload .env file to manager node
       ansible.builtin.copy:
-        src: files/env/.env
+        src: ../.env
         dest: "{{ env_file }}"
         mode: '0644'
 
