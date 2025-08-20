@@ -5,7 +5,7 @@
     overlay_network: healthify_net
     registry_ip: 192.168.50.4
     version: "v1.2.3"
-    env_file: "/opt/healthify/.env"
+    env_file: "files/.env"
     backend_port: "5050"
     frontend_port: "5173"
     backend_host: "backend"
