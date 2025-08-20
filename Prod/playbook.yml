@@ -15,10 +15,10 @@
 
   tasks:
 
-    - name: Ensure overlay network exists (idempotent CLI)
+    - name: Ensure overlay network exists
       ansible.builtin.shell: |
-        docker network inspect {{ overlay_network | default('healthify_net') }} >/dev/null 2>&1 || \
-        docker network create --driver overlay --attachable {{ overlay_network | default('healthify_net') }}
+        docker network inspect healthify_net >/dev/null 2>&1 || \
+        docker network create --driver overlay --attachable healthify_net
       changed_when: false
 
     - name: Upload .env file to manager node
