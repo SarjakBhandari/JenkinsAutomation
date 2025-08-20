@@ -8,8 +8,6 @@
     version: "{{ version | default('latest') }}"
     stack_file: "/home/{{ ansible_user }}/docker-stack.yml"
     env_file: "/home/{{ ansible_user }}/.env"
-    vars:
-    overlay_network: healthify_net
     backend_port: "{{ backend_port | default('5000') }}"
     frontend_port: "{{ frontend_port | default('5173') }}"
 
