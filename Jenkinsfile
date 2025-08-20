@@ -99,21 +99,23 @@ pipeline {
             }
         }
 
-        stage('Push to Local Registry') {
-            steps {
-                script {
-                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
-                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+        script {
+            def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
+            def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
 
-                    sh """
-                        docker tag healthify_frontend ${frontendImage}
-                        docker push ${frontendImage}
-                        docker tag healthify_backend ${backendImage}
-                        docker push ${backendImage}
-                    """
-                }
-            }
+            // Get container image IDs
+            def frontendId = sh(script: "docker inspect -f '{{.Image}}' healthify_frontend", returnStdout: true).trim()
+            def backendId  = sh(script: "docker inspect -f '{{.Image}}' healthify_backend", returnStdout: true).trim()
+
+            // Tag and push
+            sh """
+                docker tag ${frontendId} ${frontendImage}
+                docker push ${frontendImage}
+                docker tag ${backendId} ${backendImage}
+                docker push ${backendImage}
+            """
         }
+
 
         stage('Deploy to Swarm via Ansible') {
             agent { label 'ProductionEnv' }
