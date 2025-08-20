@@ -135,9 +135,10 @@ pipeline {
                         echo "🚀 Deploying stack to Docker Swarm"
                         sh """
                             ansible-playbook playbook.yml \
-                                --extra-vars "registry_ip=${registryIpOnly} version=${VERSION} overlay_network=healthify_net" \
-                                -u jenkins \
-                                --private-key ${SSH_KEY}
+  -u jenkins \
+  --private-key /home/jenkins/.ssh/id_rsa \
+  --extra-vars "registry_ip=192.168.50.4 version=217 overlay_network=healthify_net"
+
                         """
                     }
                 }
