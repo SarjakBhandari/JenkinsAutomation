@@ -166,12 +166,16 @@ Backend : http://${SWARM_MANAGER_IP}:5000
             agent { label 'ProductionEnv' }
             steps {
                 dir("${ANSIBLE_DIR}") {
-                    echo "📊 Deploying monitoring stack"
-                    sh """
-                        ansible-playbook monitoring.yml \
-                            -u jenkins \
-                            --private-key ${SSH_KEY}
-                    """
+                    def registryIpOnly = REGISTRY.split(':')[0]
+echo "DEBUG → registry_ip=${registryIpOnly}, version=${VERSION}"
+
+sh """
+  ansible-playbook playbook.yml \
+    -u jenkins \
+    --private-key ${SSH_KEY} \
+    --extra-vars "registry_ip=${registryIpOnly} version=${VERSION}"
+"""
+
                 }
             }
         }

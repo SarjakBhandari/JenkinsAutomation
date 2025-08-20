@@ -32,6 +32,11 @@
         dest: "{{ stack_file }}"
         mode: '0644'
 
+    - name: Fail if vars are missing
+      ansible.builtin.fail:
+        msg: "registry_ip='{{ registry_ip | default('') }}', version='{{ version | default('') }}' → Cannot pre-pull images."
+      when: registry_ip | trim | length == 0 or version | trim | length == 0
+    
     - name: Pre-pull images from registry
       ansible.builtin.shell: >
         docker pull {{ registry_ip }}:5000/healthify-backend:{{ version }}
@@ -39,11 +44,10 @@
       args:
         warn: false
       when:
-        - registry_ip is defined
-        - version is defined
         - registry_ip | trim | length > 0
         - version | trim | length > 0
       changed_when: false
+
 
 
     - name: Deploy or update Docker stack
