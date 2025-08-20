@@ -5,6 +5,10 @@
   vars:
     monitor_dir: /home/jenkins/monitoring
     stack_file: "{{ monitor_dir }}/monitoring-stack.yml"
+    prometheus_config: "{{ monitor_dir }}/prometheus.yml"
+    alert_rules: "{{ monitor_dir }}/alert.rules.yml"
+    grafana_data_dir: /var/lib/grafana
+    overlay_network: monitoring_net
 
   tasks:
     - name: Ensure monitoring directory exists
@@ -15,6 +19,14 @@
         group: jenkins
         mode: '0755'
         recurse: yes
+      tags: [monitoring]
+
+    - name: Ensure overlay network exists
+      community.docker.docker_network:
+        name: "{{ overlay_network }}"
+        driver: overlay
+        attachable: true
+        state: present
       tags: [monitoring]
 
     - name: Copy monitoring stack file
@@ -29,7 +41,7 @@
     - name: Copy Prometheus config
       copy:
         src: files/prometheus.yml
-        dest: "{{ monitor_dir }}/prometheus.yml"
+        dest: "{{ prometheus_config }}"
         owner: jenkins
         group: jenkins
         mode: '0644'
@@ -38,15 +50,15 @@
     - name: Copy alert rules
       copy:
         src: files/alert.rules.yml
-        dest: "{{ monitor_dir }}/alert.rules.yml"
+        dest: "{{ alert_rules }}"
         owner: jenkins
         group: jenkins
         mode: '0644'
       tags: [monitoring]
 
-    - name: Ensure Grafana data dir exists
+    - name: Ensure Grafana data directory exists
       file:
-        path: /var/lib/grafana
+        path: "{{ grafana_data_dir }}"
         state: directory
         owner: 472
         group: 472

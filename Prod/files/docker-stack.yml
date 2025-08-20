@@ -2,7 +2,7 @@ version: '3.2'
 
 networks:
   healthify_net:
-    driver: overlay
+    external: true
 
 volumes:
   pgdata:
@@ -18,51 +18,63 @@ services:
       - pgdata:/var/lib/postgresql/data
     networks:
       - healthify_net
-    deploy:
-      placement:
-        constraints: [node.role == manager]
-      restart_policy:
-        condition: any
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 30s
       timeout: 10s
       retries: 5
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: any
+        delay: 10s
+        max_attempts: 5
+      labels:
+        - "monitoring=true"
 
   backend:
-    image: 192.168.50.4:5000/healthify-backend:latest
+    image: ${REGISTRY}/healthify-backend:${VERSION}
     env_file:
       - .env
     ports:
-      - "5000:5000"
+      - "${BACKEND_PORT:-5000}:5000"
     networks:
       - healthify_net
     depends_on:
       - postgres
-    deploy:
-      replicas: 2
-      restart_policy:
-        condition: on-failure
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
-
-  frontend:
-    image: 192.168.50.4:5000/healthify-frontend:latest
-    env_file:
-      - .env
-    ports:
-      - "5173:5173"
-    networks:
-      - healthify_net
     deploy:
       replicas: 2
       restart_policy:
         condition: on-failure
+        delay: 10s
+        max_attempts: 5
+      labels:
+        - "monitoring=true"
+
+  frontend:
+    image: ${REGISTRY}/healthify-frontend:${VERSION}
+    env_file:
+      - .env
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    networks:
+      - healthify_net
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5173/health"]
       interval: 30s
       timeout: 10s
       retries: 5
+    deploy:
+      replicas: 2
+      restart_policy:
+        condition: on-failure
+        delay: 10s
+        max_attempts: 5
+      labels:
+        - "monitoring=true"

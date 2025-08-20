@@ -4,19 +4,39 @@
   become: yes
   vars:
     stack_name: healthify
+    registry_ip: "{{ registry_ip | default('192.168.50.4') }}"
+    version: "{{ version | default('latest') }}"
+    stack_file: "/home/{{ ansible_user }}/docker-stack.yml"
+    env_file: "/home/{{ ansible_user }}/.env"
+    overlay_network: healthify_net
+
   tasks:
+    - name: Ensure overlay network exists
+      community.docker.docker_network:
+        name: "{{ overlay_network }}"
+        driver: overlay
+        attachable: true
+        state: present
+
+    - name: Upload .env file to manager node
+      copy:
+        src: files/env/.env
+        dest: "{{ env_file }}"
+        mode: '0644'
+
     - name: Render docker-stack.yml from template
       template:
         src: files/docker-stack.yml.j2
         dest: "{{ stack_file }}"
+        mode: '0644'
 
-    - name: Pull backend image
+    - name: Pull backend image from registry
       community.docker.docker_image:
         name: "{{ registry_ip }}:5000/healthify-backend"
         tag: "{{ version }}"
         source: pull
 
-    - name: Pull frontend image
+    - name: Pull frontend image from registry
       community.docker.docker_image:
         name: "{{ registry_ip }}:5000/healthify-frontend"
         tag: "{{ version }}"

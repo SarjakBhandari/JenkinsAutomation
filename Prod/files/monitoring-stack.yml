@@ -30,6 +30,8 @@ services:
         constraints: [node.role == manager]
       restart_policy:
         condition: any
+      labels:
+        - "monitoring=true"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9090/-/healthy"]
       interval: 30s
@@ -43,10 +45,12 @@ services:
     networks:
       - healthify_net
     deploy:
-      restart_policy:
-        condition: any
       placement:
         constraints: [node.role == manager]
+      restart_policy:
+        condition: any
+      labels:
+        - "monitoring=true"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:9115/"]
       interval: 30s
@@ -66,10 +70,12 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     deploy:
-      restart_policy:
-        condition: any
       placement:
         constraints: [node.role == manager]
+      restart_policy:
+        condition: any
+      labels:
+        - "monitoring=true"
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
       interval: 30s

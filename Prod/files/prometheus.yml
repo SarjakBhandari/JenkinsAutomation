@@ -6,12 +6,14 @@ rule_files:
   - /etc/prometheus/alert.rules.yml
 
 scrape_configs:
+  # 🔍 Backend metrics exposed at /metrics
   - job_name: 'backend-metrics'
     metrics_path: /metrics
     static_configs:
       - targets:
           - healthify_backend:5000
 
+  # 🌐 Blackbox HTTP probes for frontend & backend health endpoints
   - job_name: 'blackbox-http'
     metrics_path: /probe
     params:
