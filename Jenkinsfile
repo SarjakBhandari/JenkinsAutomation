@@ -32,18 +32,15 @@ pipeline {
                 script {
                     def apiBaseUrl = "http://${HOST_IP}:${API_PORT}/api"
                     echo "Setting DB_HOST=healthify_db and API_BASE_URL=${apiBaseUrl}"
-
-writeFile file: 'JenkinsAutomation/app/backend/.env', text: """
-PORT=${API_PORT}
-DB_HOST=healthify_db
-DB_USER=${DB_USER}
-DB_PASSWORD=${DB_PASSWORD}
-DB_NAME=${DB_NAME}
-JWT_SECRET=healthify
-EXPIRES_IN=24h
-"""
-
-
+                    writeFile file: 'JenkinsAutomation/app/backend/.env', text: """
+                    PORT=${API_PORT}
+                    DB_HOST=healthify_db
+                    DB_USER=${DB_USER}
+                    DB_PASSWORD=${DB_PASSWORD}
+                    DB_NAME=${DB_NAME}
+                    JWT_SECRET=healthify
+                    EXPIRES_IN=24h
+                    """
                     writeFile file: 'JenkinsAutomation/app/frontend/src/config.js',
                               text: "export const API_BASE_URL = '${apiBaseUrl}';\n"
                 }
@@ -55,7 +52,11 @@ EXPIRES_IN=24h
                 dir('JenkinsAutomation') {
                     echo "Building and deploying fullstack app (staging)"
                     sh '''
-                        docker-compose up -d --build
+                        echo "Stopping and removing existing containers"
+                        docker-compose down --remove-orphans --volumes || true
+
+                        echo "Rebuilding and recreating containers"
+                        docker-compose up -d --build --force-recreate
                     '''
                 }
             }
