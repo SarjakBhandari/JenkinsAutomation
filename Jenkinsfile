@@ -103,56 +103,50 @@ pipeline {
             }
         }
 
-        stage('Debug User & Groups') {
+        stage('Push to Registry') {
             steps {
                 sh '''
-                    echo "Who am I in Jenkins job: $(whoami)"
-                    id
-                    ls -l /var/run/docker.sock
-                '''
-            }
-        }
-
-        stage('Verify Images Before Scan') {
-            steps {
-                sh '''
-                    echo "Checking for ${IMAGE_NAME_FE}:${IMAGE_TAG}..."
-                    docker images --format '{{.Repository}}:{{.Tag}}' | grep -Fx "${IMAGE_NAME_FE}:${IMAGE_TAG}" \
-                        || { echo "ERROR: ${IMAGE_NAME_FE}:${IMAGE_TAG} not found"; exit 1; }
-
-                    echo "Checking for ${IMAGE_NAME_BE}:${IMAGE_TAG}..."
-                    docker images --format '{{.Repository}}:{{.Tag}}' | grep -Fx "${IMAGE_NAME_BE}:${IMAGE_TAG}" \
-                        || { echo "ERROR: ${IMAGE_NAME_BE}:${IMAGE_TAG} not found"; exit 1; }
-                '''
-            }
-        }
-
-        stage('Scan') {
-            steps {
-                sh '''
-                    echo "Scanning frontend image..."
-                    trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME_FE}:${IMAGE_TAG}
-
-                    echo "Scanning backend image..."
-                    trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME_BE}:${IMAGE_TAG}
-                '''
-            }
-        }
-
-        stage('Push') {
-            when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
-            steps {
-                sh '''
-                    echo "Pushing frontend image to registry..."
+                    echo "Tagging and pushing frontend..."
                     docker tag ${IMAGE_NAME_FE}:${IMAGE_TAG} ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
                     docker push ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
 
-                    echo "Pushing backend image to registry..."
+                    echo "Tagging and pushing backend..."
                     docker tag ${IMAGE_NAME_BE}:${IMAGE_TAG} ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
                     docker push ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
                 '''
             }
         }
+
+        stage('Pull & Scan from Registry') {
+            steps {
+                sh '''
+                    set -e
+
+                    echo "Pulling frontend from registry..."
+                    docker pull ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+
+                    echo "Scanning frontend..."
+                    if ! trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}; then
+                        echo "VULNERABILITIES FOUND in frontend — deleting from registry..."
+                        curl -X DELETE http://${REGISTRY}/v2/${IMAGE_NAME_FE}/manifests/$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG} | cut -d'@' -f2)
+                        exit 1
+                    fi
+
+                    echo "Pulling backend from registry..."
+                    docker pull ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+
+                    echo "Scanning backend..."
+                    if ! trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}; then
+                        echo "VULNERABILITIES FOUND in backend — deleting from registry..."
+                        curl -X DELETE http://${REGISTRY}/v2/${IMAGE_NAME_BE}/manifests/$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG} | cut -d'@' -f2)
+                        exit 1
+                    fi
+
+                    echo "✅ Both images passed scan"
+                '''
+            }
+        }
+
     }
 
     post {
