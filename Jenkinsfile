@@ -108,6 +108,7 @@ pipeline {
                 '''
             }
         }
+
         stage('Push') {
             when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
             steps {
@@ -115,6 +116,9 @@ pipeline {
                 sh 'docker push 192.168.50.4:5000/healthify-frontend:latest'
             }
         }
+    }
+    
+
     post {
         success {
             mail to: 'sarjakytdfiles@gmail.com',
