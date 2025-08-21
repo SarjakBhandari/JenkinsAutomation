@@ -96,6 +96,15 @@ pipeline {
                 }
             }
         }
+        stage('Debug User & Groups') {
+    steps {
+        sh '''
+            echo "Who am I in Jenkins job: $(whoami)"
+            id
+            ls -l /var/run/docker.sock
+        '''
+    }
+}
 
      stage('Scan') {
         steps {
