@@ -105,8 +105,8 @@ pipeline {
                         docker-compose down --remove-orphans --volumes || true
                         docker-compose build \
                             --build-arg TAG=${IMAGE_TAG}
-                        docker tag ${IMAGE_NAME_FE}${IMAGE_TAG} ${IMAGE_NAME_FE}:latest
-                        docker tag ${IMAGE_NAME_BE}${IMAGE_TAG} ${IMAGE_NAME_BE}:latest
+                        docker tag ${IMAGE_NAME_FE}:${IMAGE_TAG} ${IMAGE_NAME_FE}:latest
+                        docker tag ${IMAGE_NAME_BE}:${IMAGE_TAG} ${IMAGE_NAME_BE}:latest
                         docker-compose up -d --force-recreate
                     """
                 }
@@ -128,7 +128,7 @@ pipeline {
     steps {
         dir('JenkinsAutomation') {
             script {
-                def apiBaseUrl = "http://${SWARM_MANAGER_IP}:${API_PORT}"
+                def apiBaseUrl = "http://192.168.50.4:${API_PORT}"
 
                 sh """
                     # -------------------------
