@@ -93,99 +93,36 @@ pipeline {
             }
         }
 
-        stage('Tag and Push Images') {
-        steps {
-        script {
-            def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
-            def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+        stage('Tag, Scan, and Push Images') {
+            steps {
+                script {
+                    def frontendImage = "${REGISTRY}/healthify-frontend"
+                    def backendImage  = "${REGISTRY}/healthify-backend"
 
-            sh '''
-                docker tag $(docker inspect -f '{{.Image}}' $(docker ps -qf name=healthify_frontend)) ''' + frontendImage + '''
-                docker tag $(docker inspect -f '{{.Image}}' $(docker ps -qf name=healthify_backend)) ''' + backendImage + '''
-                docker push ''' + frontendImage + '''
-                docker push ''' + backendImage + '''
-            '''
-        }
+                    // Tag from running containers
+                    sh """
+                        docker tag \$(docker inspect -f '{{.Image}}' \$(docker ps -qf name=healthify_frontend)) ${frontendImage}
+                        docker tag \$(docker inspect -f '{{.Image}}' \$(docker ps -qf name=healthify_backend)) ${backendImage}
+                    """
+
+                    // Run Trivy scan on each image
+                    sh """
+                        echo '🔍 Scanning frontend image for vulnerabilities...'
+                        trivy image --exit-code 1 --severity HIGH,CRITICAL ${frontendImage}
+
+                        echo '🔍 Scanning backend image for vulnerabilities...'
+                        trivy image --exit-code 1 --severity HIGH,CRITICAL ${backendImage}
+                    """
+
+                    // Push only if scans pass
+                    sh """
+                        docker push ${frontendImage}
+                        docker push ${backendImage}
+                    """
+                }
+            }
     }
-}
 
-
-        // stage('Pre-pull Images on ProductionEnv') {
-        //     agent { label 'ProductionEnv' }
-        //     steps {
-        //         script {
-        //             def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
-        //             def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
-        //             echo "📥 Verifying image availability before deploy"
-        //             sh """
-        //                 docker pull ${frontendImage} || echo "⚠️ Frontend image not found"
-        //                 docker pull ${backendImage}  || echo "⚠️ Backend image not found"
-        //             """
-        //         }
-        //     }
-        // }
-
-        // stage('Deploy to Swarm via Ansible') {
-        //     agent { label 'ProductionEnv' }
-        //     steps {
-        //         script {
-        //             def registryIpOnly = REGISTRY.split(':')[0]
-        //             def backendHost = HOST_IP
-        //             dir("${ANSIBLE_DIR}") {
-        //                 sh """
-        //                     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-        //                         -i /home/jenkins/.ssh/id_rsa jenkins@${SWARM_MANAGER_IP} \
-        //                         'docker network inspect healthify_net >/dev/null 2>&1 || \
-        //                         docker network create --driver overlay --attachable healthify_net'
-        //                     """
-        //                 sh """
-        //                     ansible-playbook playbook.yml \
-        //                         -u jenkins \
-        //                         --private-key ${SSH_KEY} \
-        //                         --extra-vars "registry_ip=${registryIpOnly} version=${VERSION} backend_host=${HOST_IP}"
-        //                     """
-        //                                 }
-        //                             }
-        //                         }
-        //             }
-
-        // stage('Confirm Ansible Deployment') {
-        //     steps {
-        //         echo """
-        //         ========================================================
-        //         ✅ ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
-        //         Frontend: http://${SWARM_MANAGER_IP}:5173
-        //         Backend : http://${SWARM_MANAGER_IP}:5050
-        //         ========================================================
-        //         """
-        //     }
-        // }
-
-        // stage('Deploy Monitoring via Ansible') {
-        //     agent { label 'ProductionEnv' }
-        //     steps {
-        //         dir("${ANSIBLE_DIR}") {
-        //             sh """
-        //                 ansible-playbook monitoring.yml \
-        //                     -u jenkins \
-        //                     --private-key ${SSH_KEY}
-        //             """
-        //         }
-        //     }
-        // }
-
-        // stage('Confirm Monitoring & Print URLs') {
-        //     steps {
-        //         echo """
-        //             ========================================================
-        //             📈 Monitoring deployed
-        //             Prometheus: http://${SWARM_MANAGER_IP}:9090
-        //             Grafana   : http://${SWARM_MANAGER_IP}:3000
-        //             Grafana credentials: admin/admin123
-        //             ========================================================
-        //             """
-        //             }
-        // }
     }
 
     post {
