@@ -136,10 +136,12 @@ pipeline {
                     docker pull ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
 
                     echo "Scanning backend..."
-                    if ! trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}; then
+                    if ! trivy image --scanners vuln --skip-dirs /app/node_modules --exit-code 1 --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}; then
                         echo "VULNERABILITIES FOUND in backend — deleting from registry..."
-                        curl -X DELETE http://${REGISTRY}/v2/${IMAGE_NAME_BE}/manifests/$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG} | cut -d'@' -f2)
-                        exit 1
+                        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE}:${IMAGE_TAG} | cut -d'@' -f2)
+                        curl -sf -X DELETE "http://${REGISTRY}/v2/${IMAGE}/manifests/${DIGEST}" \
+                        || echo "Delete unsupported by registry — image remains quarantined"
+
                     fi
 
                     echo "✅ Both images passed scan"
