@@ -127,39 +127,40 @@ pipeline {
     }
 }
 
+stage('Pull & Scan from Registry') {
+    steps {
+        sh '''
+            set -e
 
+            echo "Pulling frontend from registry..."
+            docker pull ${REGISTRY}/${IMAGE_NAME_FE}:latest
 
-        stage('Pull & Scan from Registry') {
-            steps {
-                sh '''
-                    set -e
+            echo "Scanning frontend..."
+            if ! trivy image --scanners vuln --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_FE}:latest; then
+                echo "VULNERABILITIES FOUND in frontend — deleting from registry..."
+                DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE_NAME_FE}:latest | cut -d'@' -f2)
+                curl -sf -X DELETE "http://${REGISTRY}/v2/${IMAGE_NAME_FE}/manifests/${DIGEST}" \
+                    || echo "Delete unsupported by registry — image remains quarantined"
+                exit 1
+            fi
 
-                    echo "Pulling frontend from registry..."
-                    docker pull ${REGISTRY}/${IMAGE_NAME_FE}:latest
+            echo "Pulling backend from registry..."
+            docker pull ${REGISTRY}/${IMAGE_NAME_BE}:latest
 
-                    echo "Scanning frontend..."
-                    if ! trivy image --scanners vuln --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_FE}:latest then
-                        echo "VULNERABILITIES FOUND in frontend — deleting from registry..."
-                        curl -X DELETE http://${REGISTRY}/v2/${IMAGE_NAME_FE}/manifests/$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE_NAME_FE}:latest | cut -d'@' -f2)
-                        exit 1
-                    fi
+            echo "Scanning backend..."
+            if ! trivy image --scanners vuln --skip-dirs usr/src/app/node_modules --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_BE}:latest; then
+                echo "VULNERABILITIES FOUND in backend — deleting from registry..."
+                DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE_NAME_BE}:latest | cut -d'@' -f2)
+                curl -sf -X DELETE "http://${REGISTRY}/v2/${IMAGE_NAME_BE}/manifests/${DIGEST}" \
+                    || echo "Delete unsupported by registry — image remains quarantined"
+                exit 1
+            fi
 
-                    echo "Pulling backend from registry..."
-                    docker pull ${REGISTRY}/${IMAGE_NAME_BE}:latest
+            echo "✅ Both images passed scan"
+        '''
+    }
+}
 
-                    echo "Scanning backend..."
-                    if ! trivy image --scanners vuln --skip-dirs usr/src/app/node_modules --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_BE}:latest; then
-                        echo "VULNERABILITIES FOUND in backend — deleting from registry..."
-                        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE}:latest | cut -d'@' -f2)
-                        curl -sf -X DELETE "http://${REGISTRY}/v2/${IMAGE}/manifests/${DIGEST}" \
-                        || echo "Delete unsupported by registry — image remains quarantined"
-
-                    fi
-
-                    echo "✅ Both images passed scan"
-                '''
-            }
-        }
 
     }
 
