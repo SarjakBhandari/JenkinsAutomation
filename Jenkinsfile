@@ -77,15 +77,36 @@ pipeline {
             }
         }
 
+        stage('Clean Old Containers & Images') {
+        steps {
+            script {
+                echo "Stopping and removing old Healthify containers..."
+                sh '''
+                    # Stop only Healthify containers
+                    docker ps -a --filter "name=healthify" --format "{{.ID}}" | xargs -r docker stop
+                    docker ps -a --filter "name=healthify" --format "{{.ID}}" | xargs -r docker rm -f
+
+                    echo "Removing old Healthify images..."
+                    # Remove only Healthify images
+                    docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "healthify-(frontend|backend)" | xargs -r docker rmi -f
+
+                    echo "Optional: Remove dangling images not used by any container"
+                    docker images -f "dangling=true" -q | xargs -r docker rmi -f
+                '''
+            }
+        }
+    }
+
+
         stage('Build and Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
                     sh """
                         docker-compose down --remove-orphans --volumes || true
                         docker-compose build \
-                            --build-arg TAG=${IMAGE_TAG}
-                        docker tag ${IMAGE_NAME_FE}:latest ${IMAGE_NAME_FE}:${IMAGE_TAG}
-                        docker tag ${IMAGE_NAME_BE}:latest ${IMAGE_NAME_BE}:${IMAGE_TAG}
+                            --build-arg TAG=latest
+                        docker tag ${IMAGE_NAME_FE}:latest ${IMAGE_NAME_FE}:latest
+                        docker tag ${IMAGE_NAME_BE}:latest ${IMAGE_NAME_BE}:latest
                         docker-compose up -d --force-recreate
                     """
                 }
