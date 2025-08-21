@@ -103,19 +103,35 @@ pipeline {
             }
         }
 
-        stage('Push to Registry') {
-            steps {
-                sh '''
-                    echo "Tagging and pushing frontend..."
-                    docker tag ${IMAGE_NAME_FE}:${IMAGE_TAG} ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
-                    docker push ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+        stage('Build and Push Images') {
+    steps {
+        dir('JenkinsAutomation') {
+            script {
+                def apiBaseUrl = "http://${SWARM_MANAGER_IP}:${API_PORT}/api/"
 
-                    echo "Tagging and pushing backend..."
-                    docker tag ${IMAGE_NAME_BE}:${IMAGE_TAG} ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
-                    docker push ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
-                '''
+                sh """
+# Build frontend with proper API_BASE_URL
+docker build --no-cache \
+  --build-arg API_BASE_URL=${apiBaseUrl} \
+  -t ${IMAGE_NAME_FE}:latest ./app/frontend
+
+# Build backend
+docker build --no-cache \
+  -t ${IMAGE_NAME_BE}:latest ./app/backend
+
+# Tag for registry
+docker tag ${IMAGE_NAME_FE}:latest ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+docker tag ${IMAGE_NAME_BE}:latest ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+
+# Push to registry
+docker push ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+docker push ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+"""
             }
         }
+    }
+}
+
 
         stage('Pull & Scan from Registry') {
             steps {
