@@ -110,31 +110,36 @@ pipeline {
                 def apiBaseUrl = "http://${SWARM_MANAGER_IP}:${API_PORT}"
 
                 sh """
+                    # -------------------------
                     # Build frontend with proper API_BASE_URL
+                    # -------------------------
                     docker build --no-cache \
-                    --build-arg API_BASE_URL=${apiBaseUrl} \
-                    -t ${IMAGE_NAME_FE}:latest ./app/frontend
+                        --build-arg API_BASE_URL=${apiBaseUrl} \
+                        -t ${IMAGE_NAME_FE}:latest ./app/frontend
 
                     # Build backend
                     docker build --no-cache \
-                    -t ${IMAGE_NAME_BE}:latest ./app/backend
+                        -t ${IMAGE_NAME_BE}:latest ./app/backend
 
-                    # Tag for registry (overwrite is automatic)
+                    # Tag for registry (overwrites any existing image with same tag)
                     docker tag ${IMAGE_NAME_FE}:latest ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
                     docker tag ${IMAGE_NAME_BE}:latest ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
 
-                    # Push to registry (overwrite previous images with same tag)
+                    # Push images (overwrite previous images automatically)
                     docker push ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
                     docker push ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
 
-                    # Optional: Pull & scan right after push
+                    # Optional: Remove dangling images locally to avoid conflicts
+                    docker images -f "dangling=true" -q | xargs -r docker rmi -f
+
+                    # Pull back from registry to verify
                     docker pull ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
                     docker pull ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
-                    """
-                                }
-                            }
-                        }
-                    }
+                """
+            }
+        }
+    }
+}
 
 
 
