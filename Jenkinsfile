@@ -122,7 +122,7 @@ pipeline {
                 docker push ${REGISTRY}/healthify-backend:latest
             '''
         }
-    }
+    }}
 
     post {
         success {
