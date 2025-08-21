@@ -2,6 +2,9 @@ import React, { lazy, Suspense, useState } from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import Home from "./public/Home/index";
 import ProtectedRoute from './ProtectedRoute'; // Ensure correct import
+import { recordFrontendMetric } from './utils/metrics';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 const Register = lazy(() => import('./public/HospitalRegistration/index'));
 const Login = lazy(() => import('./public/Login/index'));
@@ -27,6 +30,10 @@ function App() {
   const addStaff = (staffMember) => setStaff([...staff, staffMember]);
   const addPatient = (patient) => setPatients([...patients, patient]);
   const addAppointment = (appointment) => setAppointments([...appointments, appointment]);
+
+  useEffect(() => {
+    recordFrontendMetric('frontend_route_change', 1, { path: location.pathname });
+  }, [location]);
 
   return (
     <Router>
