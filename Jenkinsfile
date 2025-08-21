@@ -96,8 +96,8 @@ pipeline {
         stage('Tag, Scan, and Push Images') {
             steps {
                 script {
-                    def frontendImage = "${REGISTRY}/healthify-frontend"
-                    def backendImage  = "${REGISTRY}/healthify-backend"
+                    def frontendImage = "${REGISTRY}/healthify-frontend:latest"
+                    def backendImage  = "${REGISTRY}/healthify-backend:latest"
 
                     // Tag from running containers
                     sh """
@@ -121,8 +121,7 @@ pipeline {
                     """
                 }
             }
-    }
-
+        }
     }
 
     post {
