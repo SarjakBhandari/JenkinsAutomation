@@ -77,27 +77,6 @@ pipeline {
             }
         }
 
-        stage('Clean Old Containers & Images') {
-        steps {
-            script {
-                echo "Stopping and removing old Healthify containers..."
-                sh '''
-                    # Stop only Healthify containers
-                    docker ps -a --filter "name=healthify" --format "{{.ID}}" | xargs -r docker stop
-                    docker ps -a --filter "name=healthify" --format "{{.ID}}" | xargs -r docker rm -f
-
-                    echo "Removing old Healthify images..."
-                    # Remove only Healthify images
-                    docker images --format "{{.Repository}}:{{.Tag}}" | grep -E "healthify-(frontend|backend)" | xargs -r docker rmi -f
-
-                    echo "Optional: Remove dangling images not used by any container"
-                    docker images -f "dangling=true" -q | xargs -r docker rmi -f
-                '''
-            }
-        }
-    }
-
-
         stage('Build and Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
@@ -134,14 +113,7 @@ pipeline {
                     # -------------------------
                     # Build frontend with proper API_BASE_URL
                     # -------------------------
-                    docker build --no-cache \
-                        --build-arg API_BASE_URL=${apiBaseUrl} \
-                        -t ${IMAGE_NAME_FE}:latest ./app/frontend
-
-                    # Build backend
-                    docker build --no-cache \
-                        -t ${IMAGE_NAME_BE}:latest ./app/backend
-
+            
                     # Tag for registry (overwrites any existing image with same tag)
                     docker tag ${IMAGE_NAME_FE}:latest ${REGISTRY}/${IMAGE_NAME_FE}:latest
                     docker tag ${IMAGE_NAME_BE}:latest ${REGISTRY}/${IMAGE_NAME_BE}:latest
@@ -149,13 +121,6 @@ pipeline {
                     # Push images (overwrite previous images automatically)
                     docker push ${REGISTRY}/${IMAGE_NAME_FE}:latest
                     docker push ${REGISTRY}/${IMAGE_NAME_BE}:latest
-
-                    # Optional: Remove dangling images locally to avoid conflicts
-                    docker images -f "dangling=true" -q | xargs -r docker rmi -f
-
-                    # Pull back from registry to verify
-                    docker pull ${REGISTRY}/${IMAGE_NAME_FE}:latest
-                    docker pull ${REGISTRY}/${IMAGE_NAME_BE}:latest
                 """
             }
         }
