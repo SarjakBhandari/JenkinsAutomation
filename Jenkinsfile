@@ -104,9 +104,9 @@ pipeline {
                     sh """
                         docker-compose down --remove-orphans --volumes || true
                         docker-compose build \
-                            --build-arg TAG=latest
-                        docker tag ${IMAGE_NAME_FE}:latest ${IMAGE_NAME_FE}:latest
-                        docker tag ${IMAGE_NAME_BE}:latest ${IMAGE_NAME_BE}:latest
+                            --build-arg TAG=${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME_FE}${IMAGE_TAG} ${IMAGE_NAME_FE}:latest
+                        docker tag ${IMAGE_NAME_BE}${IMAGE_TAG} ${IMAGE_NAME_BE}:latest
                         docker-compose up -d --force-recreate
                     """
                 }
