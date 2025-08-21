@@ -97,24 +97,30 @@ pipeline {
             }
         }
 
-        stage('Scan') {
-            steps {
-                sh '''
-                    echo "Scanning frontend image built by docker-compose..."
-                    trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
-                '''
-            }
-        }
+     stage('Scan') {
+        steps {
+            sh '''
+                echo "Scanning frontend image built by docker-compose..."
+                trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
 
-        stage('Push') {
-            when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
-            steps {
-                sh '''
-                    echo "Tagging and pushing frontend image to registry..."
-                    docker tag healthify-frontend:latest ${REGISTRY}/healthify-frontend:latest
-                    docker push ${REGISTRY}/healthify-frontend:latest
-                '''
-            }
+                echo "Scanning backend image built by docker-compose..."
+                trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-backend:latest
+            '''
+        }
+    }
+
+    stage('Push') {
+        when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
+        steps {
+            sh '''
+                echo "Tagging and pushing frontend image to registry..."
+                docker tag healthify-frontend:latest ${REGISTRY}/healthify-frontend:latest
+                docker push ${REGISTRY}/healthify-frontend:latest
+
+                echo "Tagging and pushing backend image to registry..."
+                docker tag healthify-backend:latest ${REGISTRY}/healthify-backend:latest
+                docker push ${REGISTRY}/healthify-backend:latest
+            '''
         }
     }
 
