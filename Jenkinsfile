@@ -107,30 +107,35 @@ pipeline {
     steps {
         dir('JenkinsAutomation') {
             script {
-                def apiBaseUrl = "http://${SWARM_MANAGER_IP}:${API_PORT}/api/"
+                def apiBaseUrl = "http://${SWARM_MANAGER_IP}:${API_PORT}"
 
                 sh """
-# Build frontend with proper API_BASE_URL
-docker build --no-cache \
-  --build-arg API_BASE_URL=${apiBaseUrl} \
-  -t ${IMAGE_NAME_FE}:latest ./app/frontend
+                    # Build frontend with proper API_BASE_URL
+                    docker build --no-cache \
+                    --build-arg API_BASE_URL=${apiBaseUrl} \
+                    -t ${IMAGE_NAME_FE}:latest ./app/frontend
 
-# Build backend
-docker build --no-cache \
-  -t ${IMAGE_NAME_BE}:latest ./app/backend
+                    # Build backend
+                    docker build --no-cache \
+                    -t ${IMAGE_NAME_BE}:latest ./app/backend
 
-# Tag for registry
-docker tag ${IMAGE_NAME_FE}:latest ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
-docker tag ${IMAGE_NAME_BE}:latest ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+                    # Tag for registry (overwrite is automatic)
+                    docker tag ${IMAGE_NAME_FE}:latest ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+                    docker tag ${IMAGE_NAME_BE}:latest ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
 
-# Push to registry
-docker push ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
-docker push ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
-"""
-            }
-        }
-    }
-}
+                    # Push to registry (overwrite previous images with same tag)
+                    docker push ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+                    docker push ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+
+                    # Optional: Pull & scan right after push
+                    docker pull ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+                    docker pull ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+                    """
+                                }
+                            }
+                        }
+                    }
+
 
 
         stage('Pull & Scan from Registry') {
