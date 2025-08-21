@@ -9,7 +9,9 @@ pipeline {
         API_PORT           = '5050'
         FRONTEND_PORT      = '5173'
         REGISTRY           = "192.168.50.4:5000"
-        VERSION            = "${BUILD_NUMBER}"
+        IMAGE_NAME_FE      = 'healthify-frontend'
+        IMAGE_NAME_BE      = 'healthify-backend'
+        IMAGE_TAG          = 'latest'   // static default tag
         SONAR_SCANNER_OPTS = "-Xmx1024m"
         SWARM_MANAGER_IP   = "192.168.50.4"
         ANSIBLE_DIR        = "Prod"
@@ -78,10 +80,14 @@ pipeline {
         stage('Build and Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
-                    sh '''
+                    sh """
                         docker-compose down --remove-orphans --volumes || true
-                        docker-compose up -d --build --force-recreate
-                    '''
+                        docker-compose build \
+                            --build-arg TAG=${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME_FE}:latest ${IMAGE_NAME_FE}:${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME_BE}:latest ${IMAGE_NAME_BE}:${IMAGE_TAG}
+                        docker-compose up -d --force-recreate
+                    """
                 }
             }
         }
@@ -96,42 +102,58 @@ pipeline {
                 }
             }
         }
+
         stage('Debug User & Groups') {
-    steps {
-        sh '''
-            echo "Who am I in Jenkins job: $(whoami)"
-            id
-            ls -l /var/run/docker.sock
-        '''
-    }
-}
+            steps {
+                sh '''
+                    echo "Who am I in Jenkins job: $(whoami)"
+                    id
+                    ls -l /var/run/docker.sock
+                '''
+            }
+        }
 
-     stage('Scan') {
-        steps {
-            sh '''
-                echo "Scanning frontend image built by docker-compose..."
-                trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
+        stage('Verify Images Before Scan') {
+            steps {
+                sh '''
+                    echo "Checking for ${IMAGE_NAME_FE}:${IMAGE_TAG}..."
+                    docker images --format '{{.Repository}}:{{.Tag}}' | grep -Fx "${IMAGE_NAME_FE}:${IMAGE_TAG}" \
+                        || { echo "ERROR: ${IMAGE_NAME_FE}:${IMAGE_TAG} not found"; exit 1; }
 
-                echo "Scanning backend image built by docker-compose..."
-                trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-backend:latest
-            '''
+                    echo "Checking for ${IMAGE_NAME_BE}:${IMAGE_TAG}..."
+                    docker images --format '{{.Repository}}:{{.Tag}}' | grep -Fx "${IMAGE_NAME_BE}:${IMAGE_TAG}" \
+                        || { echo "ERROR: ${IMAGE_NAME_BE}:${IMAGE_TAG} not found"; exit 1; }
+                '''
+            }
+        }
+
+        stage('Scan') {
+            steps {
+                sh '''
+                    echo "Scanning frontend image..."
+                    trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME_FE}:${IMAGE_TAG}
+
+                    echo "Scanning backend image..."
+                    trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL ${IMAGE_NAME_BE}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('Push') {
+            when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
+            steps {
+                sh '''
+                    echo "Pushing frontend image to registry..."
+                    docker tag ${IMAGE_NAME_FE}:${IMAGE_TAG} ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+                    docker push ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+
+                    echo "Pushing backend image to registry..."
+                    docker tag ${IMAGE_NAME_BE}:${IMAGE_TAG} ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+                    docker push ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+                '''
+            }
         }
     }
-
-    stage('Push') {
-        when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
-        steps {
-            sh '''
-                echo "Tagging and pushing frontend image to registry..."
-                docker tag healthify-frontend:latest ${REGISTRY}/healthify-frontend:latest
-                docker push ${REGISTRY}/healthify-frontend:latest
-
-                echo "Tagging and pushing backend image to registry..."
-                docker tag healthify-backend:latest ${REGISTRY}/healthify-backend:latest
-                docker push ${REGISTRY}/healthify-backend:latest
-            '''
-        }
-    }}
 
     post {
         success {
