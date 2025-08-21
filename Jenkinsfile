@@ -122,19 +122,19 @@ pipeline {
                         -t ${IMAGE_NAME_BE}:latest ./app/backend
 
                     # Tag for registry (overwrites any existing image with same tag)
-                    docker tag ${IMAGE_NAME_FE}:latest ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
-                    docker tag ${IMAGE_NAME_BE}:latest ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+                    docker tag ${IMAGE_NAME_FE}:latest ${REGISTRY}/${IMAGE_NAME_FE}:latest
+                    docker tag ${IMAGE_NAME_BE}:latest ${REGISTRY}/${IMAGE_NAME_BE}:latest
 
                     # Push images (overwrite previous images automatically)
-                    docker push ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
-                    docker push ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+                    docker push ${REGISTRY}/${IMAGE_NAME_FE}:latest
+                    docker push ${REGISTRY}/${IMAGE_NAME_BE}:latest
 
                     # Optional: Remove dangling images locally to avoid conflicts
                     docker images -f "dangling=true" -q | xargs -r docker rmi -f
 
                     # Pull back from registry to verify
-                    docker pull ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
-                    docker pull ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+                    docker pull ${REGISTRY}/${IMAGE_NAME_FE}:latest
+                    docker pull ${REGISTRY}/${IMAGE_NAME_BE}:latest
                 """
             }
         }
@@ -149,22 +149,22 @@ pipeline {
                     set -e
 
                     echo "Pulling frontend from registry..."
-                    docker pull ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}
+                    docker pull ${REGISTRY}/${IMAGE_NAME_FE}:latest
 
                     echo "Scanning frontend..."
-                    if ! trivy image --scanners vuln --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG}; then
+                    if ! trivy image --scanners vuln --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_FE}:latest then
                         echo "VULNERABILITIES FOUND in frontend — deleting from registry..."
-                        curl -X DELETE http://${REGISTRY}/v2/${IMAGE_NAME_FE}/manifests/$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE_NAME_FE}:${IMAGE_TAG} | cut -d'@' -f2)
+                        curl -X DELETE http://${REGISTRY}/v2/${IMAGE_NAME_FE}/manifests/$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE_NAME_FE}:latest | cut -d'@' -f2)
                         exit 1
                     fi
 
                     echo "Pulling backend from registry..."
-                    docker pull ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}
+                    docker pull ${REGISTRY}/${IMAGE_NAME_BE}:latest
 
                     echo "Scanning backend..."
-                    if ! trivy image --scanners vuln --skip-dirs usr/src/app/node_modules --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_BE}:${IMAGE_TAG}; then
+                    if ! trivy image --scanners vuln --skip-dirs usr/src/app/node_modules --severity HIGH,CRITICAL ${REGISTRY}/${IMAGE_NAME_BE}:latest; then
                         echo "VULNERABILITIES FOUND in backend — deleting from registry..."
-                        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE}:${IMAGE_TAG} | cut -d'@' -f2)
+                        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' ${REGISTRY}/${IMAGE}:latest | cut -d'@' -f2)
                         curl -sf -X DELETE "http://${REGISTRY}/v2/${IMAGE}/manifests/${DIGEST}" \
                         || echo "Delete unsupported by registry — image remains quarantined"
 
