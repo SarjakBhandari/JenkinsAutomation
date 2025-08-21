@@ -75,7 +75,7 @@ pipeline {
             }
         }
 
-        stage('build and Deploy Staging') {
+        stage('Build and Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
                     sh '''
@@ -97,12 +97,10 @@ pipeline {
             }
         }
 
-    
-
         stage('Scan') {
             steps {
                 sh '''
-                    echo "Scanning local frontend image..."
+                    echo "Scanning frontend image built by docker-compose..."
                     trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
                 '''
             }
