@@ -76,7 +76,7 @@ pipeline {
         }
 
 
-        stage('Build and Deploy Staging') {
+        stage('Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
                     sh '''
@@ -86,6 +86,7 @@ pipeline {
                 }
             }
         }
+        
 
         
 
@@ -100,24 +101,38 @@ pipeline {
             }
         }
 
-        stage('Scan') {
-            steps {
-                sh '''
-                echo "🔍 Scanning local frontend image..."
-                trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
-                '''
+        stage('Build Frontend Image') {
+                steps {
+                    dir('JenkinsAutomation/app/frontend') {
+                        sh '''
+                            echo "🔨 Building local frontend image..."
+                            docker build -t healthify-frontend:latest .
+                        '''
+                    }
+                }
             }
-        }
 
-        stage('Push') {
-            when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
-            steps {
-                sh 'docker tag healthify-frontend:latest 192.168.50.4:5000/healthify-frontend:latest'
-                sh 'docker push 192.168.50.4:5000/healthify-frontend:latest'
+            stage('Scan') {
+                steps {
+                    sh '''
+                        echo "🔍 Scanning local frontend image..."
+                        # This will now use the image we just built locally
+                        trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
+                    '''
+                }
             }
-        }
-    }
-    
+
+            stage('Push') {
+                when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
+                steps {
+                    sh '''
+                        echo "📦 Tagging and pushing frontend image to registry..."
+                        docker tag healthify-frontend:latest ${REGISTRY}/healthify-frontend:latest
+                        docker push ${REGISTRY}/healthify-frontend:latest
+                    '''
+                }
+            }
+
 
     post {
         success {
