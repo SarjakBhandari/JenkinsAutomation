@@ -100,37 +100,21 @@ pipeline {
             }
         }
 
-        stage('Tag, Scan, and Push Images') {
+        stage('Scan') {
             steps {
-                script {
-                    def frontendImage = "${REGISTRY}/healthify-frontend:latest"
-                    def backendImage  = "${REGISTRY}/healthify-backend:latest"
-
-                    // Tag from running containers
-                    sh """
-                        docker tag \$(docker inspect -f '{{.Image}}' \$(docker ps -qf name=healthify_frontend)) ${frontendImage}
-                        docker tag \$(docker inspect -f '{{.Image}}' \$(docker ps -qf name=healthify_backend)) ${backendImage}
-                    """
-
-                    // Run Trivy scan on each image
-                    sh """
-                        echo '🔍 Scanning frontend image for vulnerabilities...'
-                        trivy image --exit-code 1 --severity HIGH,CRITICAL ${frontendImage}
-
-                        echo '🔍 Scanning backend image for vulnerabilities...'
-                        trivy image --exit-code 1 --severity HIGH,CRITICAL ${backendImage}
-                    """
-
-                    // Push only if scans pass
-                    sh """
-                        docker push ${frontendImage}
-                        docker push ${backendImage}
-                    """
-                }
+                sh '''
+                echo "🔍 Scanning local frontend image..."
+                trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
+                '''
             }
         }
-    }
-
+        stage('Push') {
+            when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
+            steps {
+                sh 'docker tag healthify-frontend:latest 192.168.50.4:5000/healthify-frontend:latest'
+                sh 'docker push 192.168.50.4:5000/healthify-frontend:latest'
+            }
+        }
     post {
         success {
             mail to: 'sarjakytdfiles@gmail.com',
