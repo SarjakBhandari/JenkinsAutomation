@@ -45,17 +45,6 @@ pipeline {
             }
         }
 
-        stage('Build and Deploy Staging') {
-            steps {
-                dir('JenkinsAutomation') {
-                    sh '''
-                        docker-compose down --remove-orphans --volumes || true
-                        docker-compose up -d --build --force-recreate
-                    '''
-                }
-            }
-        }
-
         stage('SonarQube Analysis') {
             steps {
                 withSonarQubeEnv('SonarQube') {
@@ -80,6 +69,19 @@ pipeline {
             }
         }
 
+        stage('Build and Deploy Staging') {
+            steps {
+                dir('JenkinsAutomation') {
+                    sh '''
+                        docker-compose down --remove-orphans --volumes || true
+                        docker-compose up -d --build --force-recreate
+                    '''
+                }
+            }
+        }
+
+        
+
         stage('Preview and Approval') {
             steps {
                 script {
@@ -92,7 +94,7 @@ pipeline {
         }
 
         stage('Tag and Push Images') {
-    steps {
+        steps {
         script {
             def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
             def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
@@ -108,118 +110,82 @@ pipeline {
 }
 
 
-        stage('Pre-pull Images on ProductionEnv') {
-            agent { label 'ProductionEnv' }
-            steps {
-                script {
-                    def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
-                    def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
-                    echo "📥 Verifying image availability before deploy"
-                    sh """
-                        docker pull ${frontendImage} || echo "⚠️ Frontend image not found"
-                        docker pull ${backendImage}  || echo "⚠️ Backend image not found"
-                    """
-                }
-            }
-        }
+        // stage('Pre-pull Images on ProductionEnv') {
+        //     agent { label 'ProductionEnv' }
+        //     steps {
+        //         script {
+        //             def frontendImage = "${REGISTRY}/healthify-frontend:${VERSION}"
+        //             def backendImage  = "${REGISTRY}/healthify-backend:${VERSION}"
+        //             echo "📥 Verifying image availability before deploy"
+        //             sh """
+        //                 docker pull ${frontendImage} || echo "⚠️ Frontend image not found"
+        //                 docker pull ${backendImage}  || echo "⚠️ Backend image not found"
+        //             """
+        //         }
+        //     }
+        // }
 
-        stage('Deploy to Swarm via Ansible') {
-    agent { label 'ProductionEnv' }
-    steps {
-        script {
-            def registryIpOnly = REGISTRY.split(':')[0]
-            def backendHost = HOST_IP
-            dir("${ANSIBLE_DIR}") {
-                sh """
-ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
-    -i /home/jenkins/.ssh/id_rsa jenkins@${SWARM_MANAGER_IP} \
-    'docker network inspect healthify_net >/dev/null 2>&1 || \
-     docker network create --driver overlay --attachable healthify_net'
-                """
-                sh """
-                    ansible-playbook playbook.yml \
-                        -u jenkins \
-                        --private-key ${SSH_KEY} \
-                        --extra-vars "registry_ip=${registryIpOnly} version=${VERSION} backend_host=${HOST_IP}"
-"
-                """
-            }
-        }
-    }
-}
+        // stage('Deploy to Swarm via Ansible') {
+        //     agent { label 'ProductionEnv' }
+        //     steps {
+        //         script {
+        //             def registryIpOnly = REGISTRY.split(':')[0]
+        //             def backendHost = HOST_IP
+        //             dir("${ANSIBLE_DIR}") {
+        //                 sh """
+        //                     ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null \
+        //                         -i /home/jenkins/.ssh/id_rsa jenkins@${SWARM_MANAGER_IP} \
+        //                         'docker network inspect healthify_net >/dev/null 2>&1 || \
+        //                         docker network create --driver overlay --attachable healthify_net'
+        //                     """
+        //                 sh """
+        //                     ansible-playbook playbook.yml \
+        //                         -u jenkins \
+        //                         --private-key ${SSH_KEY} \
+        //                         --extra-vars "registry_ip=${registryIpOnly} version=${VERSION} backend_host=${HOST_IP}"
+        //                     """
+        //                                 }
+        //                             }
+        //                         }
+        //             }
 
-        stage('Confirm Ansible Deployment') {
-            steps {
-                echo """
-========================================================
-✅ ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
-Frontend: http://${SWARM_MANAGER_IP}:5173
-Backend : http://${SWARM_MANAGER_IP}:5050
-========================================================
-"""
-            }
-        }
+        // stage('Confirm Ansible Deployment') {
+        //     steps {
+        //         echo """
+        //         ========================================================
+        //         ✅ ANSIBLE SWARM DEPLOYMENT SUCCESSFUL
+        //         Frontend: http://${SWARM_MANAGER_IP}:5173
+        //         Backend : http://${SWARM_MANAGER_IP}:5050
+        //         ========================================================
+        //         """
+        //     }
+        // }
 
-        stage('Deploy Monitoring via Ansible') {
-            agent { label 'ProductionEnv' }
-            steps {
-                dir("${ANSIBLE_DIR}") {
-                    sh """
-                        ansible-playbook monitoring.yml \
-                            -u jenkins \
-                            --private-key ${SSH_KEY}
-                    """
-                }
-            }
-        }
+        // stage('Deploy Monitoring via Ansible') {
+        //     agent { label 'ProductionEnv' }
+        //     steps {
+        //         dir("${ANSIBLE_DIR}") {
+        //             sh """
+        //                 ansible-playbook monitoring.yml \
+        //                     -u jenkins \
+        //                     --private-key ${SSH_KEY}
+        //             """
+        //         }
+        //     }
+        // }
 
-        stage('Confirm Monitoring & Print URLs') {
-            steps {
-                echo """
-========================================================
-📈 Monitoring deployed
-Prometheus: http://${SWARM_MANAGER_IP}:9090
-Grafana   : http://${SWARM_MANAGER_IP}:3000
-Grafana credentials: admin/admin123
-========================================================
-"""
-            }
-        }
-
-        stage('Validate Swarm Health') {
-            agent { label 'ProductionEnv' }
-            steps {
-                sh """
-                    ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
-                        docker node ls &&
-                        docker service ls &&
-                        docker ps --filter "health=unhealthy"
-                    '
-                """
-            }
-        }
-
-        stage('Check Container Resource Usage') {
-            agent { label 'ProductionEnv' }
-            steps {
-                sh """
-                    ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
-                        docker stats --no-stream --format "table {{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}"
-                    '
-                """
-            }
-        }
-
-        stage('Cleanup Dangling Images') {
-            agent { label 'ProductionEnv' }
-            steps {
-                sh """
-                    ssh -i ${SSH_KEY} jenkins@${SWARM_MANAGER_IP} '
-                        docker image prune -f
-                    '
-                """
-            }
-        }
+        // stage('Confirm Monitoring & Print URLs') {
+        //     steps {
+        //         echo """
+        //             ========================================================
+        //             📈 Monitoring deployed
+        //             Prometheus: http://${SWARM_MANAGER_IP}:9090
+        //             Grafana   : http://${SWARM_MANAGER_IP}:3000
+        //             Grafana credentials: admin/admin123
+        //             ========================================================
+        //             """
+        //             }
+        // }
     }
 
     post {
