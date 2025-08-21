@@ -66,17 +66,16 @@ pipeline {
                 timeout(time: 5, unit: 'MINUTES') {
                     script {
                         def qg = waitForQualityGate()
-                        echo "🔍 Quality Gate status: ${qg.status}"
+                        echo "Quality Gate status: ${qg.status}"
                         if (qg.status != 'OK') {
-                            error "❌ Pipeline aborted due to Quality Gate failure."
+                            error "Pipeline aborted due to Quality Gate failure."
                         }
                     }
                 }
             }
         }
 
-
-        stage('Deploy Staging') {
+        stage('build and Deploy Staging') {
             steps {
                 dir('JenkinsAutomation') {
                     sh '''
@@ -86,53 +85,40 @@ pipeline {
                 }
             }
         }
-        
-
-        
 
         stage('Preview and Approval') {
             steps {
                 script {
-                    echo "🖥 Preview your app at: http://${HOST_IP}:${FRONTEND_PORT}"
+                    echo "Preview your app at: http://${HOST_IP}:${FRONTEND_PORT}"
                 }
                 timeout(time: 1, unit: 'DAYS') {
-                    input message: '✅ Approve production deployment when ready.'
+                    input message: 'Approve production deployment when ready.'
                 }
             }
         }
 
-        stage('Build Frontend Image') {
-                steps {
-                    dir('JenkinsAutomation/app/frontend') {
-                        sh '''
-                            echo "🔨 Building local frontend image..."
-                            docker build -t healthify-frontend:latest .
-                        '''
-                    }
-                }
-            }
+    
 
-            stage('Scan') {
-                steps {
-                    sh '''
-                        echo "🔍 Scanning local frontend image..."
-                        # This will now use the image we just built locally
-                        trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
-                    '''
-                }
+        stage('Scan') {
+            steps {
+                sh '''
+                    echo "Scanning local frontend image..."
+                    trivy image --scanners vuln --exit-code 1 --severity HIGH,CRITICAL healthify-frontend:latest
+                '''
             }
+        }
 
-            stage('Push') {
-                when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
-                steps {
-                    sh '''
-                        echo "📦 Tagging and pushing frontend image to registry..."
-                        docker tag healthify-frontend:latest ${REGISTRY}/healthify-frontend:latest
-                        docker push ${REGISTRY}/healthify-frontend:latest
-                    '''
-                }
+        stage('Push') {
+            when { expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') } }
+            steps {
+                sh '''
+                    echo "Tagging and pushing frontend image to registry..."
+                    docker tag healthify-frontend:latest ${REGISTRY}/healthify-frontend:latest
+                    docker push ${REGISTRY}/healthify-frontend:latest
+                '''
             }
-
+        }
+    }
 
     post {
         success {
