@@ -1,10 +1,8 @@
-import React, { lazy, Suspense, useState } from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import React, { lazy, Suspense, useState, useEffect } from 'react';
+import { Route, Routes, useLocation } from 'react-router-dom';
 import Home from "./public/Home/index";
-import ProtectedRoute from './ProtectedRoute'; // Ensure correct import
+import ProtectedRoute from './ProtectedRoute';
 import { recordFrontendMetric } from './utils/metrics';
-import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 
 const Register = lazy(() => import('./public/HospitalRegistration/index'));
 const Login = lazy(() => import('./public/Login/index'));
@@ -27,45 +25,37 @@ function App() {
   const [patients, setPatients] = useState([]);
   const [appointments, setAppointments] = useState([]);
 
-  const addDoctor = (doctor) => setDoctors([...doctors, doctor]);
-  const addStaff = (staffMember) => setStaff([...staff, staffMember]);
-  const addPatient = (patient) => setPatients([...patients, patient]);
-  const addAppointment = (appointment) => setAppointments([...appointments, appointment]);
-
   useEffect(() => {
     recordFrontendMetric('frontend_route_change', 1, { path: location.pathname });
   }, [location]);
 
   return (
-    <Router>
-      <Suspense fallback={<div>Loading...</div>}>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/about" element={<About />} />
+    <Suspense fallback={<div>Loading...</div>}>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route path="/about" element={<About />} />
 
-          {/* ✅ Admin Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
-            <Route path="/admin" element={<AdminPanel />} />
-          </Route>
+        {/* ✅ Admin Protected Routes */}
+        <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+          <Route path="/admin" element={<AdminPanel />} />
+        </Route>
 
-          {/* ✅ Organization Protected Routes */}
-          <Route element={<ProtectedRoute allowedRoles={["organization"]} />}>
-            <Route path="/hospital-dashboard" element={<HospitalDashboard />} />
-            <Route path="/doctor-management" element={<DoctorManagement doctors={doctors} />} />
-            <Route path="/staff-management" element={<StaffManagement staff={staff} />} />
-            <Route path="/patient-management" element={<PatientManagement patients={patients} />} />
-            <Route path="/appointment-management" element={<AppointmentManagement appointments={appointments} />} />
-            <Route path="/doctor-registration" element={<DoctorRegistration addDoctor={addDoctor} />} />
-            <Route path="/staff-registration" element={<StaffRegistration addStaff={addStaff} />} />
-            <Route path="/patient-registration" element={<PatientRegistration addPatient={addPatient} />} />
-            <Route path="/appointment-registration" element={<AppointmentRegistration addAppointment={addAppointment} />} />
-          </Route>
-
-        </Routes>
-      </Suspense>
-    </Router>
+        {/* ✅ Organization Protected Routes */}
+        <Route element={<ProtectedRoute allowedRoles={["organization"]} />}>
+          <Route path="/hospital-dashboard" element={<HospitalDashboard />} />
+          <Route path="/doctor-management" element={<DoctorManagement doctors={doctors} />} />
+          <Route path="/staff-management" element={<StaffManagement staff={staff} />} />
+          <Route path="/patient-management" element={<PatientManagement patients={patients} />} />
+          <Route path="/appointment-management" element={<AppointmentManagement appointments={appointments} />} />
+          <Route path="/doctor-registration" element={<DoctorRegistration addDoctor={doctor => setDoctors([...doctors, doctor])} />} />
+          <Route path="/staff-registration" element={<StaffRegistration addStaff={staffMember => setStaff([...staff, staffMember])} />} />
+          <Route path="/patient-registration" element={<PatientRegistration addPatient={patient => setPatients([...patients, patient])} />} />
+          <Route path="/appointment-registration" element={<AppointmentRegistration addAppointment={appointment => setAppointments([...appointments, appointment])} />} />
+        </Route>
+      </Routes>
+    </Suspense>
   );
 }
 
