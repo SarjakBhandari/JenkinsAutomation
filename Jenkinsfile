@@ -156,7 +156,7 @@ stage('Pull & Scan from Registry') {
                 exit 1
             fi
 
-            echo "✅ Both images passed scan"
+            echo "Both images passed scan"
         '''
     }
 }
