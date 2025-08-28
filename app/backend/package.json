@@ -20,6 +20,7 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.13.3",
+    "prom-client": "^14.1.0",
     "pg-hstore": "^2.3.4",
     "react": "^19.0.0",
     "sequelize": "^6.37.5",
