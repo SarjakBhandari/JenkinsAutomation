@@ -1,7 +1,8 @@
-// src/server.js
 const express = require('express');
 const cors = require('cors');
-const sequelize = require('./database/connection.js'); // Updated database connection
+const fs = require('fs');
+const path = require('path');
+const sequelize = require('./database/connection.js');
 const authRoutes = require('./routes/authRoutes.js');
 const adminRoutes = require('./routes/adminRoutes.js');
 const organizationRoutes = require('./routes/organizationRoutes.js');
@@ -11,21 +12,23 @@ const staffRoutes = require('./routes/staffRoutes.js');
 const doctorRoutes = require('./routes/doctorRoutes.js');
 const { verifyToken } = require('./middleware/authMiddleware.js');
 require('dotenv').config();
+
 const client = require('prom-client');
 client.collectDefaultMetrics();
 
 const frontendRouteCounter = new client.Counter({
   name: 'frontend_route_change_total',
   help: 'Total route changes in frontend',
-  labelNames: ['path']
+  labelNames: ['path'],
 });
-
 
 const requestCounter = new client.Counter({
   name: 'http_requests_total',
   help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status']
-})
+  labelNames: ['method', 'route', 'status'],
+});
+
+const LOG_PATH = path.join(__dirname, 'metrics.log');
 
 const app = express();
 app.use(cors());
@@ -42,42 +45,43 @@ app.use('/api/patient', verifyToken, patientRoutes);
 app.use('/api/staff', verifyToken, staffRoutes);
 app.use('/api/doctor', verifyToken, doctorRoutes);
 
-// Sync database and start server
-// Metrics endpoint for Prometheus
-
-app.post('/metrics-client', (req, res) => {
-  const { metric, value, labels } = req.body;
-
-  if (metric === 'frontend_route_change') {
-    frontendRouteCounter.inc(labels, value);
-  }
-
-  res.sendStatus(200);
-});
-app.get('/metrics', async (req, res) => {
-  res.set('Content-Type', client.register.contentType);
-  res.end(await client.register.metrics());
-});
-
 // Request counter middleware
 app.use((req, res, next) => {
   res.on('finish', () => {
     requestCounter.inc({
       method: req.method,
       route: req.route?.path || req.path,
-      status: res.statusCode
+      status: res.statusCode,
     });
   });
   next();
 });
 
 
-sequelize.sync()
-    .then(() => {
-        app.listen(process.env.PORT, () => {
-            console.log(`Server is running on port ${process.env.PORT}`);
-        });
-    })
-    .catch(err => {
-        console.error('Unable to connect to the database:', err);
+app.post('/metrics-client', (req, res) => {
+  const { event, value, context } = req.body;
+
+  if (event === 'frontend_route_change' && context?.path) {
+    frontendRouteCounter.inc({ path: context.path }, value || 1);
+  }
+
+  fs.appendFileSync(LOG_PATH, JSON.stringify({ event, value, context, timestamp: new Date().toISOString() }) + '\n');
+  res.status(200).send({ status: 'ok' });
+});
+
+
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', client.register.contentType);
+  res.end(await client.register.metrics());
+});
+
+sequelize
+  .sync()
+  .then(() => {
+    app.listen(process.env.PORT, () => {
+      console.log(`Server is running on port ${process.env.PORT}`);
     });
+  })
+  .catch((err) => {
+    console.error('Unable to connect to the database:', err);
+  });
