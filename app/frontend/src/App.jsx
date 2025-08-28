@@ -21,6 +21,7 @@ const DoctorRegistration = lazy(() => import('./private/DoctorManagement/DoctorR
 const AppointmentRegistration = lazy(() => import('./private/AppointmentManagment/AppointmentBook'));
 
 function App() {
+  const location = useLocation();
   const [doctors, setDoctors] = useState([]);
   const [staff, setStaff] = useState([]);
   const [patients, setPatients] = useState([]);
