@@ -106,15 +106,9 @@ pipeline {
                 def apiBaseUrl = "http://192.168.50.4:${API_PORT}"
 
                 sh """
-                    # -------------------------
-                    # Build frontend with proper API_BASE_URL
-                    # -------------------------
-            
-                    # Tag for registry (overwrites any existing image with same tag)
                     docker tag ${IMAGE_NAME_FE}:latest ${REGISTRY}/${IMAGE_NAME_FE}:latest
                     docker tag ${IMAGE_NAME_BE}:latest ${REGISTRY}/${IMAGE_NAME_BE}:latest
 
-                    # Push images (overwrite previous images automatically)
                     docker push ${REGISTRY}/${IMAGE_NAME_FE}:latest
                     docker push ${REGISTRY}/${IMAGE_NAME_BE}:latest
                 """
@@ -165,7 +159,7 @@ stage('Pull & Scan from Registry') {
             mail to: 'sarjakytdfiles@gmail.com',
                  subject: 'BUILD SUCCESS',
                  body: """Build #${BUILD_NUMBER} succeeded.
-                 Staging build succeded with quality checks and push to docker registry
+                 Staging build succeded with quality checks and push to docker registry which had passed the scan
                 App: http://${HOST_IP}:${FRONTEND_PORT}
                 API: http://${HOST_IP}:${API_PORT}
 
