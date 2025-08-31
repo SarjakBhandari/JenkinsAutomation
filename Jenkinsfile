@@ -2,22 +2,18 @@ pipeline {
     agent { label 'SlaveNode' }
 
     environment {
-        DOCKER_HOST        = 'unix:///var/run/docker.sock'
-        DB_USER            = 'postgres'
-        DB_PASSWORD        = 'postgres'
-        DB_NAME            = 'healthify'
-        API_PORT           = '5050'
-        FRONTEND_PORT      = '5173'
-        REGISTRY           = "192.168.50.4:5000"
-        IMAGE_NAME_FE      = 'healthify-frontend'
-        IMAGE_NAME_BE      = 'healthify-backend'
-        IMAGE_TAG          = 'latest'   // static default tag
-        SONAR_SCANNER_OPTS = "-Xmx1024m"
-        SWARM_MANAGER_IP   = "192.168.50.4"
-        ANSIBLE_DIR        = "Prod"
-        SSH_KEY            = "~/.ssh/id_rsa"
-        HOST_IP            = "192.168.50.3"
+        DB_USER       = 'postgres'
+        DB_PASSWORD   = 'postgres'
+        DB_NAME       = 'healthify'
+        API_PORT      = '5050'
+        FRONTEND_PORT = '5173'
+        REGISTRY      = "192.168.50.4:5000"
+        IMAGE_NAME_FE = 'healthify-frontend'
+        IMAGE_NAME_BE = 'healthify-backend'
+        IMAGE_TAG     = 'latest'
+        HOST_IP       = "192.168.50.3"
     }
+
 
     stages {
 
@@ -169,10 +165,10 @@ stage('Pull & Scan from Registry') {
             mail to: 'sarjakytdfiles@gmail.com',
                  subject: 'BUILD SUCCESS',
                  body: """Build #${BUILD_NUMBER} succeeded.
-App: http://${SWARM_MANAGER_IP}:5173
-API: http://${SWARM_MANAGER_IP}:5000
-Prometheus: http://${SWARM_MANAGER_IP}:9090
-Grafana: http://${SWARM_MANAGER_IP}:3000 (admin/admin123)
+                 Staging build succeded with quality checks and push to docker registry
+                App: http://${HOST_IP}:${FRONTEND_PORT}
+                API: http://${HOST_IP}:${API_PORT}
+
 ${BUILD_URL}"""
         }
         failure {
