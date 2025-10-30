@@ -117,10 +117,8 @@ pipeline {
             mail to: 'sarjakytdfiles@gmail.com',
                  subject: 'BUILD SUCCESS',
                  body: """Build #${BUILD_NUMBER} succeeded.
-App: http://${SWARM_MANAGER_IP}:${FRONTEND_PORT}
-API: http://${SWARM_MANAGER_IP}:${BACKEND_PORT}
-Prometheus: http://${SWARM_MANAGER_IP}:9090
-Grafana: http://${SWARM_MANAGER_IP}:3000 (admin/admin123)
+                        App: http://192.168.50.3:${FRONTEND_PORT}
+                        API: http://192.168.50.3:${BACKEND_PORT}
 ${BUILD_URL}"""
         }
         failure {
