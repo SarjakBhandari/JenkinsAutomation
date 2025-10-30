@@ -28,7 +28,7 @@ pipeline {
                             /opt/sonar-scanner/bin/sonar-scanner \
                                 -Dsonar.projectKey=healthify \
                                 -Dsonar.sources=JenkinsAutomation/app/backend/ \
-                                -Dsonar.host.url=http://192.168.50.3:9000 \
+                                -Dsonar.host.url=http://${HOST_IP}:9000 \
                                 -Dsonar.login=$SONAR_TOKEN
                         '''
                     }
@@ -117,8 +117,8 @@ pipeline {
             mail to: 'sarjakytdfiles@gmail.com',
                  subject: 'BUILD SUCCESS',
                  body: """Build #${BUILD_NUMBER} succeeded.
-                        App: http://192.168.50.3:${FRONTEND_PORT}
-                        API: http://192.168.50.3:${BACKEND_PORT}
+                        App: http://${HOST_IP}:${FRONTEND_PORT}
+                        API: http://${HOST_IP}:${BACKEND_PORT}
 ${BUILD_URL}"""
         }
         failure {
