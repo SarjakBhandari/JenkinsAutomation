@@ -1,3 +1,5 @@
+version: '3.2'
+
 services:
   postgres:
     image: postgres:${POSTGRES_VERSION}
@@ -23,10 +25,9 @@ services:
     build:
       context: ./app/backend
       dockerfile: Dockerfile
+      args:
+        TAG: ${IMAGE_TAG}
     container_name: healthify_backend
-    depends_on:
-      postgres:
-        condition: service_healthy
     env_file:
       - .env
     ports:
