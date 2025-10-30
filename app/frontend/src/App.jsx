@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
 import Home from './public/Home/index';
 import ProtectedRoute from './ProtectedRoute';
-import { recordFrontendMetric } from './utils/metrics';
+
 
 const Register = lazy(() => import('./public/HospitalRegistration/index'));
 const Login = lazy(() => import('./public/Login/index'));
@@ -18,16 +18,6 @@ const StaffRegistration = lazy(() => import('./private/StaffManagement/StaffReg'
 const DoctorRegistration = lazy(() => import('./private/DoctorManagement/DoctorReg'));
 const AppointmentRegistration = lazy(() => import('./private/AppointmentManagment/AppointmentBook'));
 
-function RouteMetricsTracker() {
-  const location = useLocation();
-
-  useEffect(() => {
-    recordFrontendMetric('frontend_route_change', 1, { path: location.pathname });
-  }, [location]);
-
-  return null;
-}
-
 function App() {
   const [doctors, setDoctors] = useState([]);
   const [staff, setStaff] = useState([]);
@@ -41,7 +31,6 @@ function App() {
 
   return (
     <BrowserRouter>
-      <RouteMetricsTracker />
       <Suspense fallback={<div>Loading...</div>}>
         <Routes>
           <Route path="/" element={<Home />} />
