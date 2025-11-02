@@ -75,13 +75,22 @@ app.get('/metrics', async (req, res) => {
   res.end(await client.register.metrics());
 });
 
-sequelize
-  .sync()
-  .then(() => {
-    app.listen(process.env.PORT, () => {
-      console.log(`Server is running on port ${process.env.PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error('Unable to connect to the database:', err);
-  });
+const connectWithRetry = async (retries = 20, delay = 5000) => {
+  for (let i = 0; i < retries; i++) {
+    try {
+      await sequelize.sync();
+      console.log('Connected to DB');
+      app.listen(process.env.PORT, () => {
+        console.log(`Server is running on port ${process.env.PORT}`);
+      });
+      return;
+    } catch (err) {
+      console.error(`DB connect failed (attempt ${i + 1}):`, err.message);
+      await new Promise(res => setTimeout(res, delay));
+    }
+  }
+  console.error(' Could not connect to DB after retries');
+  process.exit(1);
+};
+
+connectWithRetry();
