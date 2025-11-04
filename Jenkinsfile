@@ -22,19 +22,22 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                withSonarQubeEnv('SonarQube') {
-                    withCredentials([string(credentialsId: 'sonar-token-id', variable: 'SONAR_TOKEN')]) {
-                        sh '''
-                            /opt/sonar-scanner/bin/sonar-scanner \
-                                -Dsonar.projectKey=healthify \
-                                -Dsonar.sources=JenkinsAutomation/app/backend/ \
-                                -Dsonar.host.url=http://${HOST_IP}:9000 \
-                                -Dsonar.login=$SONAR_TOKEN
-                        '''
+                catchError(buildResult: 'FAILURE', stageResult: 'FAILURE') {
+                    withSonarQubeEnv('SonarQube') {
+                        withCredentials([string(credentialsId: 'sonar-token-id', variable: 'SONAR_TOKEN')]) {
+                            sh '''
+                                /opt/sonar-scanner/bin/sonar-scanner \
+                                    -Dsonar.projectKey=healthify \
+                                    -Dsonar.sources=JenkinsAutomation/app/backend/ \
+                                    -Dsonar.host.url=http://${HOST_IP}:9000 \
+                                    -Dsonar.login=$SONAR_TOKEN
+                            '''
+                        }
                     }
                 }
             }
         }
+
 
         stage('Quality Gate') {
             steps {
